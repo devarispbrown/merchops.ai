@@ -1,0 +1,30 @@
+{
+  "name": "@merchops/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared types, schemas, and utilities for MerchOps",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./types": "./types/index.ts",
+    "./types/*": "./types/*.ts",
+    "./schemas": "./schemas/index.ts",
+    "./schemas/*": "./schemas/*.ts",
+    "./prompts": "./prompts/index.ts",
+    "./prompts/*": "./prompts/*.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "merchops",
+  "private": true,
+  "packageManager": "pnpm@8.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @merchops/web dev",
+    "build": "pnpm --filter @merchops/web build",
+    "start": "pnpm --filter @merchops/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @merchops/web test",
+    "test:e2e": "pnpm --filter @merchops/web test:e2e",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:validate": "prisma validate",
+    "workers": "pnpm --filter @merchops/web workers"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "prisma": "^5.10.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@sentry/node": "^10.36.0",
+    "@sentry/profiling-node": "^10.36.0"
+  }
+}

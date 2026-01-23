@@ -1,0 +1,9 @@
+# pnpm workspace configuration
+# Defines workspaces for the monorepo structure
+
+packages:
+  # Main application
+  - 'apps/*'
+
+  # Shared packages
+  - 'packages/*'

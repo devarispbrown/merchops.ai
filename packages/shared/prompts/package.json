@@ -1,0 +1,23 @@
+{
+  "name": "@merchops/shared-prompts",
+  "version": "1.0.0",
+  "description": "Versioned AI prompts for MerchOps with audit support",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./types": "./types.ts",
+    "./opportunity-rationale": "./opportunity-rationale.ts",
+    "./discount-copy": "./discount-copy.ts",
+    "./winback-email": "./winback-email.ts"
+  },
+  "keywords": [
+    "prompts",
+    "ai",
+    "versioning",
+    "audit"
+  ],
+  "author": "MerchOps",
+  "license": "UNLICENSED",
+  "private": true
+}

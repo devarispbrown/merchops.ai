@@ -1,0 +1,343 @@
+// MerchOps Beta MVP - Prisma Schema
+// Calm operator console for Shopify merchants
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum OpportunityState {
+  new
+  viewed
+  approved
+  executed
+  resolved
+  dismissed
+  expired
+}
+
+enum ActionDraftState {
+  draft
+  edited
+  approved
+  executing
+  executed
+  failed
+  rejected
+}
+
+enum ExecutionStatus {
+  pending
+  running
+  succeeded
+  failed
+  retrying
+}
+
+enum OutcomeType {
+  helped
+  neutral
+  hurt
+}
+
+enum PriorityBucket {
+  high
+  medium
+  low
+}
+
+enum OperatorIntent {
+  reduce_inventory_risk
+  reengage_dormant_customers
+  protect_margin
+}
+
+enum ExecutionType {
+  discount_draft
+  winback_email_draft
+  pause_product
+}
+
+enum ShopifyConnectionStatus {
+  active
+  revoked
+  error
+}
+
+enum EventType {
+  // Inventory events
+  inventory_threshold_crossed
+  product_out_of_stock
+  product_back_in_stock
+
+  // Velocity events
+  velocity_spike
+
+  // Customer events
+  customer_inactivity_threshold
+
+  // Order events
+  order_created
+  order_paid
+
+  // Product events
+  product_created
+  product_updated
+}
+
+enum EventSource {
+  webhook
+  scheduled_job
+  api_sync
+  computed
+  manual
+}
+
+// ============================================================================
+// TENANCY
+// ============================================================================
+
+model Workspace {
+  id         String   @id @default(uuid())
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  users               User[]
+  shopify_connections ShopifyConnection[]
+  shopify_objects     ShopifyObjectCache[]
+  events              Event[]
+  opportunities       Opportunity[]
+  action_drafts       ActionDraft[]
+  executions          Execution[]
+  ai_generations      AiGeneration[]
+
+  @@index([created_at])
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  workspace_id  String
+  created_at    DateTime @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id])
+  @@index([email])
+}
+
+// ============================================================================
+// SHOPIFY INTEGRATION
+// ============================================================================
+
+model ShopifyConnection {
+  id                     String                  @id @default(uuid())
+  workspace_id           String                  @unique // 1:1 for MVP
+  store_domain           String
+  access_token_encrypted String // Encrypted at rest
+  scopes                 String // Space-separated scope list
+  status                 ShopifyConnectionStatus @default(active)
+  installed_at           DateTime                @default(now())
+  revoked_at             DateTime?
+
+  // Relations
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id])
+  @@index([status])
+  @@index([store_domain])
+}
+
+// Denormalized cache for Shopify objects (products, inventory, etc)
+model ShopifyObjectCache {
+  id           String   @id @default(uuid())
+  workspace_id String
+  object_type  String // "product", "inventory_level", "customer", "order"
+  shopify_id   String // The Shopify object ID
+  data_json    Json // Full object snapshot
+  version      Int      @default(1) // Incremented on updates
+  synced_at    DateTime @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, object_type, shopify_id])
+  @@index([workspace_id, object_type])
+  @@index([synced_at])
+}
+
+// ============================================================================
+// EVENT STORE (IMMUTABLE)
+// ============================================================================
+
+model Event {
+  id           String      @id @default(uuid())
+  workspace_id String
+  type         EventType
+  occurred_at  DateTime // When the event actually happened
+  payload_json Json // Event-specific data
+  dedupe_key   String // Prevents duplicate events
+  source       EventSource
+  created_at   DateTime    @default(now())
+
+  // Relations
+  workspace         Workspace              @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  opportunity_links OpportunityEventLink[]
+
+  @@unique([workspace_id, dedupe_key])
+  @@index([workspace_id, type])
+  @@index([workspace_id, occurred_at])
+  @@index([created_at])
+}
+
+// ============================================================================
+// OPPORTUNITIES
+// ============================================================================
+
+model Opportunity {
+  id              String           @id @default(uuid())
+  workspace_id    String
+  type            String // "inventory_clearance", "winback_campaign", etc
+  priority_bucket PriorityBucket
+  why_now         String           @db.Text // Explicit, non-generic explanation
+  rationale       String           @db.Text // Plain language, store-specific
+  impact_range    String // e.g., "5-15 units", "$200-$500"
+  counterfactual  String           @db.Text // What happens if no action taken
+  decay_at        DateTime? // When this opportunity expires or degrades
+  confidence      Float            @default(0.5) // 0.0 - 1.0
+  state           OpportunityState @default(new)
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  // Relations
+  workspace     Workspace              @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  event_links   OpportunityEventLink[]
+  action_drafts ActionDraft[]
+
+  @@index([workspace_id, state])
+  @@index([workspace_id, priority_bucket])
+  @@index([workspace_id, created_at])
+  @@index([decay_at])
+}
+
+// Link table: Opportunities to Events (many-to-many)
+model OpportunityEventLink {
+  opportunity_id String
+  event_id       String
+
+  // Relations
+  opportunity Opportunity @relation(fields: [opportunity_id], references: [id], onDelete: Cascade)
+  event       Event       @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@id([opportunity_id, event_id])
+  @@index([opportunity_id])
+  @@index([event_id])
+}
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
+
+model ActionDraft {
+  id                   String           @id @default(uuid())
+  workspace_id         String
+  opportunity_id       String
+  operator_intent      OperatorIntent
+  execution_type       ExecutionType
+  payload_json         Json // Full execution payload
+  editable_fields_json Json // Fields user can safely edit
+  state                ActionDraftState @default(draft)
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+
+  // Relations
+  workspace   Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunity_id], references: [id], onDelete: Cascade)
+  executions  Execution[]
+
+  @@index([workspace_id, state])
+  @@index([opportunity_id])
+  @@index([created_at])
+}
+
+// ============================================================================
+// EXECUTIONS (IMMUTABLE)
+// ============================================================================
+
+model Execution {
+  id                     String          @id @default(uuid())
+  workspace_id           String
+  action_draft_id        String
+  request_payload_json   Json // What was sent
+  provider_response_json Json? // What came back
+  status                 ExecutionStatus @default(pending)
+  error_code             String?
+  error_message          String?         @db.Text
+  started_at             DateTime        @default(now())
+  finished_at            DateTime?
+  idempotency_key        String          @unique // Prevents double execution
+
+  // Relations
+  workspace    Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  action_draft ActionDraft @relation(fields: [action_draft_id], references: [id], onDelete: Cascade)
+  outcome      Outcome?
+
+  @@index([workspace_id, status])
+  @@index([action_draft_id])
+  @@index([started_at])
+  @@index([idempotency_key])
+}
+
+// ============================================================================
+// LEARNING LOOP
+// ============================================================================
+
+model Outcome {
+  id            String      @id @default(uuid())
+  execution_id  String      @unique
+  outcome       OutcomeType
+  computed_at   DateTime    @default(now())
+  evidence_json Json // Metrics, comparison windows, etc
+
+  // Relations
+  execution Execution @relation(fields: [execution_id], references: [id], onDelete: Cascade)
+
+  @@index([execution_id])
+  @@index([outcome])
+  @@index([computed_at])
+}
+
+// ============================================================================
+// AI AUDIT
+// ============================================================================
+
+model AiGeneration {
+  id             String   @id @default(uuid())
+  workspace_id   String
+  prompt_version String // Versioned prompt identifier
+  inputs_json    Json // What was provided to AI
+  outputs_json   Json // What AI generated
+  model          String // Model identifier
+  tokens         Int // Token count
+  latency_ms     Int // Response time
+  created_at     DateTime @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id, prompt_version])
+  @@index([created_at])
+  @@index([model])
+}

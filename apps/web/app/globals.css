@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Calm color palette - muted blues and grays */
+    --background: 0 0% 98%;
+    --foreground: 220 15% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 20%;
+
+    --primary: 210 20% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 88%;
+    --secondary-foreground: 220 15% 20%;
+
+    --muted: 210 15% 92%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 210 20% 90%;
+    --accent-foreground: 210 20% 30%;
+
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
+    --ring: 210 20% 45%;
+
+    /* Success state - subtle green */
+    --success: 150 25% 45%;
+    --success-light: 150 25% 95%;
+
+    /* Warning state - muted amber */
+    --warning: 35 30% 50%;
+    --warning-light: 35 30% 95%;
+
+    /* Error state - muted red */
+    --error: 355 30% 50%;
+    --error-light: 355 30% 95%;
+
+    /* Priority buckets */
+    --priority-high: 355 30% 50%;
+    --priority-medium: 35 30% 50%;
+    --priority-low: 210 15% 55%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 220 20% 12%;
+    --foreground: 210 15% 92%;
+
+    --card: 220 20% 15%;
+    --card-foreground: 210 15% 92%;
+
+    --primary: 210 20% 60%;
+    --primary-foreground: 220 20% 12%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 210 15% 92%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 210 10% 60%;
+
+    --accent: 210 20% 22%;
+    --accent-foreground: 210 20% 85%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 210 20% 60%;
+
+    --success: 150 25% 55%;
+    --success-light: 150 25% 15%;
+
+    --warning: 35 30% 60%;
+    --warning-light: 35 30% 15%;
+
+    --error: 355 30% 60%;
+    --error-light: 355 30% 15%;
+
+    --priority-high: 355 30% 60%;
+    --priority-medium: 35 30% 60%;
+    --priority-low: 210 15% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Typography scale - calm and readable */
+  h1 {
+    @apply text-3xl font-semibold tracking-tight;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  h4 {
+    @apply text-lg font-medium;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+  }
+
+  small {
+    @apply text-sm text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  /* Priority bucket colors */
+  .priority-high {
+    @apply bg-error-light text-error border-error/20;
+  }
+
+  .priority-medium {
+    @apply bg-warning-light text-warning border-warning/20;
+  }
+
+  .priority-low {
+    @apply bg-secondary text-secondary-foreground border-border;
+  }
+
+  /* State indicators */
+  .status-success {
+    @apply bg-success-light text-success border-success/20;
+  }
+
+  .status-pending {
+    @apply bg-warning-light text-warning border-warning/20;
+  }
+
+  .status-error {
+    @apply bg-error-light text-error border-error/20;
+  }
+
+  /* Calm transitions */
+  .transition-calm {
+    @apply transition-all duration-200 ease-in-out;
+  }
+}
