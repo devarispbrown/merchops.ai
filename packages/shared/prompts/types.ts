@@ -77,6 +77,7 @@ export interface AIGenerationResult<TOutput extends PromptOutput> {
   output: TOutput;
   metadata: {
     model: string;
+    provider?: string;
     tokens: number;
     latency_ms: number;
     used_fallback: boolean;

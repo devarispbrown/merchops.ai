@@ -3,6 +3,8 @@
  *
  * Handles AI generation with audit logging, fallback behavior, and error handling.
  * All generations are logged to ai_generations table.
+ *
+ * Supports multiple LLM providers: Anthropic, OpenAI, and Ollama.
  */
 
 import type {
@@ -13,64 +15,57 @@ import type {
   AIGenerationRecord,
 } from "@merchops/shared/prompts";
 import { PrismaClient } from "@prisma/client";
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const AI_ENABLED = Boolean(ANTHROPIC_API_KEY);
+import {
+  type LLMProvider,
+  type CompletionResponse,
+  type ProviderConfig,
+  getPrimaryProvider,
+  getProviderChain,
+  withRetry,
+  withFallback,
+} from "./providers";
+import { loadAIConfig, getAIConfigSync, isProviderConfigured } from "./config";
 
-// Claude 3.5 Sonnet - cost efficient and high quality
-const AI_MODEL = "claude-3-5-sonnet-20241022";
-const MAX_TOKENS = 2000;
-const TEMPERATURE = 0.7;
+// Cache for provider instances
+let cachedConfig: ProviderConfig | null = null;
+let cachedProvider: LLMProvider | null = null;
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY_MS = 1000;
-const RETRY_MULTIPLIER = 2;
-
-// Initialize Anthropic client
-let anthropic: Anthropic | null = null;
-if (AI_ENABLED) {
-  anthropic = new Anthropic({
-    apiKey: ANTHROPIC_API_KEY,
-  });
+/**
+ * Get provider configuration (cached)
+ */
+function getConfig(): ProviderConfig {
+  if (!cachedConfig) {
+    cachedConfig = getAIConfigSync();
+  }
+  return cachedConfig;
 }
 
 /**
- * Retry wrapper with exponential backoff
+ * Check if AI is enabled (any provider configured)
  */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries: number = MAX_RETRIES,
-  delayMs: number = INITIAL_RETRY_DELAY_MS
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries <= 0) {
-      throw error;
-    }
+function isAIEnabled(): boolean {
+  const config = getConfig();
+  return isProviderConfigured(config.provider, config);
+}
 
-    // Check if error is retryable
-    const isRetryable =
-      error instanceof Anthropic.APIError &&
-      (error.status === 429 || // Rate limit
-        error.status === 500 || // Server error
-        error.status === 502 || // Bad gateway
-        error.status === 503 || // Service unavailable
-        error.status === 504); // Gateway timeout
-
-    if (!isRetryable) {
-      throw error;
-    }
-
-    // Wait before retrying
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-
-    // Retry with exponential backoff
-    return withRetry(fn, retries - 1, delayMs * RETRY_MULTIPLIER);
+/**
+ * Get primary provider instance (cached)
+ */
+function getProvider(): LLMProvider {
+  if (!cachedProvider) {
+    const config = getConfig();
+    cachedProvider = getPrimaryProvider(config);
   }
+  return cachedProvider;
+}
+
+/**
+ * Reset provider cache (useful for testing or config changes)
+ */
+export function resetProviderCache(): void {
+  cachedConfig = null;
+  cachedProvider = null;
 }
 
 /**
@@ -103,43 +98,66 @@ function parseAIResponse<TOutput extends PromptOutput>(
 }
 
 /**
- * Generate AI output using Anthropic Claude
+ * Call LLM provider with the given prompt
  */
-async function callAnthropicAPI<TInput extends PromptInput, TOutput extends PromptOutput>(
+async function callLLMProvider<TInput extends PromptInput, TOutput extends PromptOutput>(
   prompt: PromptTemplate<TInput, TOutput>,
   input: TInput
-): Promise<{ output: TOutput; inputTokens: number; outputTokens: number }> {
-  if (!anthropic) {
-    throw new Error("Anthropic client not initialized");
-  }
+): Promise<{ output: TOutput; response: CompletionResponse; providerName: string }> {
+  const config = getConfig();
+  const provider = getProvider();
 
-  const response = await withRetry(async () => {
-    return await anthropic!.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
-      temperature: TEMPERATURE,
-      system: prompt.systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: prompt.userPromptTemplate(input),
-        },
-      ],
-    });
+  // Build messages array
+  const messages = [
+    { role: "system" as const, content: prompt.systemPrompt },
+    { role: "user" as const, content: prompt.userPromptTemplate(input) },
+  ];
+
+  // Try with retry logic
+  const response = await withRetry(provider, {
+    messages,
+    maxTokens: config.maxTokens,
+    temperature: config.temperature,
   });
 
-  // Extract text content
-  const textContent = response.content.find((block) => block.type === "text");
-  if (!textContent || textContent.type !== "text") {
-    throw new Error("No text content in response");
-  }
-
-  const output = parseAIResponse<TOutput>(textContent.text, prompt.version);
+  const output = parseAIResponse<TOutput>(response.content, prompt.version);
 
   return {
     output,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
+    response,
+    providerName: provider.name,
+  };
+}
+
+/**
+ * Call LLM with fallback to secondary provider
+ */
+async function callLLMWithFallback<TInput extends PromptInput, TOutput extends PromptOutput>(
+  prompt: PromptTemplate<TInput, TOutput>,
+  input: TInput
+): Promise<{ output: TOutput; response: CompletionResponse; providerName: string }> {
+  const config = getConfig();
+  const providers = getProviderChain(config);
+
+  // Build messages array
+  const messages = [
+    { role: "system" as const, content: prompt.systemPrompt },
+    { role: "user" as const, content: prompt.userPromptTemplate(input) },
+  ];
+
+  // Try providers in sequence with fallback
+  const { response, usedProvider } = await withFallback(providers, {
+    messages,
+    maxTokens: config.maxTokens,
+    temperature: config.temperature,
+  });
+
+  const output = parseAIResponse<TOutput>(response.content, prompt.version);
+
+  return {
+    output,
+    response,
+    providerName: usedProvider.name,
   };
 }
 
@@ -153,29 +171,40 @@ export async function generateAI<TInput extends PromptInput, TOutput extends Pro
   prisma: PrismaClient
 ): Promise<AIGenerationResult<TOutput>> {
   const startTime = Date.now();
+  const config = getConfig();
 
   try {
-    if (!AI_ENABLED) {
+    if (!isAIEnabled()) {
       // Use fallback when AI is not enabled
-      console.info(`AI not enabled (ANTHROPIC_API_KEY not set), using fallback for ${prompt.version}`);
+      console.info(`AI not enabled (no provider configured), using fallback for ${prompt.version}`);
       return useFallback(prompt, input, startTime);
     }
 
-    // Call Anthropic API with retry logic
-    const { output, inputTokens, outputTokens } = await callAnthropicAPI(prompt, input);
+    // Call LLM provider with retry and optional fallback
+    const { output, response, providerName } = config.fallbackProvider
+      ? await callLLMWithFallback(prompt, input)
+      : await callLLMProvider(prompt, input);
+
     const latency_ms = Date.now() - startTime;
 
     return {
       output,
       metadata: {
-        model: AI_MODEL,
-        tokens: inputTokens + outputTokens,
+        model: response.model,
+        provider: providerName,
+        tokens: response.usage.totalTokens,
         latency_ms,
         used_fallback: false,
       },
     };
   } catch (error) {
     console.error(`AI generation failed for ${prompt.version}, using fallback:`, error);
+
+    // Check if fallback templates are enabled
+    if (!config.enableFallbackTemplates) {
+      throw error;
+    }
+
     return useFallback(prompt, input, startTime);
   }
 }
@@ -195,6 +224,7 @@ function useFallback<TInput extends PromptInput, TOutput extends PromptOutput>(
     output,
     metadata: {
       model: "fallback-template",
+      provider: "fallback",
       tokens: 0,
       latency_ms,
       used_fallback: true,
@@ -395,4 +425,24 @@ export async function generateOpportunityContent(params: {
   );
 
   return output;
+}
+
+/**
+ * Get current AI configuration info (for diagnostics)
+ */
+export function getAIConfigInfo(): {
+  provider: string;
+  modelTier: string;
+  isEnabled: boolean;
+  fallbackProvider: string | null;
+  fallbackTemplatesEnabled: boolean;
+} {
+  const config = getConfig();
+  return {
+    provider: config.provider,
+    modelTier: config.modelTier,
+    isEnabled: isAIEnabled(),
+    fallbackProvider: config.fallbackProvider || null,
+    fallbackTemplatesEnabled: config.enableFallbackTemplates,
+  };
 }
