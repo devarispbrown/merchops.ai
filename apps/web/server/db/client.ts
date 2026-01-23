@@ -32,6 +32,9 @@ export async function disconnectPrisma() {
   await prisma.$disconnect();
 }
 
-process.on('beforeExit', async () => {
-  await disconnectPrisma();
-});
+// Only register process event handler in Node.js server context
+if (typeof process !== 'undefined' && typeof process.on === 'function') {
+  process.on('beforeExit', async () => {
+    await disconnectPrisma();
+  });
+}

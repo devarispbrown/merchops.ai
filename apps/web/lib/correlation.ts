@@ -5,8 +5,33 @@
  * for distributed tracing and debugging.
  */
 
-import { AsyncLocalStorage } from 'async_hooks';
-import { randomUUID } from 'crypto';
+// Use dynamic import to avoid Edge runtime issues with async_hooks
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let correlationStorage: any = null;
+
+// Initialize AsyncLocalStorage only in Node.js environment
+if (typeof globalThis.process !== 'undefined' && globalThis.process.versions?.node) {
+  // We're in Node.js - use AsyncLocalStorage
+  import('async_hooks').then((mod) => {
+    correlationStorage = new mod.AsyncLocalStorage();
+  });
+}
+
+/**
+ * Generate a UUID compatible with both Edge and Node.js runtimes
+ */
+function generateUUID(): string {
+  // Use Web Crypto API (available in Edge, Node.js 16+, browsers)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for older environments
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 /**
  * Correlation context stored in async local storage
@@ -20,17 +45,11 @@ interface CorrelationContext {
 }
 
 /**
- * AsyncLocalStorage for correlation context
- * Automatically propagates context through async operations
- */
-const correlationStorage = new AsyncLocalStorage<CorrelationContext>();
-
-/**
  * Generate a new correlation ID
  * Format: uuid-v4 for uniqueness and sortability
  */
 export function generateCorrelationId(): string {
-  return randomUUID();
+  return generateUUID();
 }
 
 /**
@@ -38,23 +57,23 @@ export function generateCorrelationId(): string {
  * Useful for identifying the source of the correlation
  */
 export function generatePrefixedCorrelationId(prefix: string): string {
-  return `${prefix}-${randomUUID()}`;
+  return `${prefix}-${generateUUID()}`;
 }
 
 /**
  * Get the current correlation context
- * Returns undefined if no context is set
+ * Returns undefined if no context is set or in Edge runtime
  */
 export function getCorrelationContext(): CorrelationContext | undefined {
-  return correlationStorage.getStore();
+  return correlationStorage?.getStore();
 }
 
 /**
  * Get the current correlation ID
- * Returns a new ID if no context is set
+ * Returns a new ID if no context is set or in Edge runtime
  */
 export function getCorrelationId(): string {
-  const context = correlationStorage.getStore();
+  const context = correlationStorage?.getStore();
   return context?.correlationId ?? generateCorrelationId();
 }
 
@@ -62,7 +81,7 @@ export function getCorrelationId(): string {
  * Get the current workspace ID from correlation context
  */
 export function getCorrelationWorkspaceId(): string | undefined {
-  const context = correlationStorage.getStore();
+  const context = correlationStorage?.getStore();
   return context?.workspaceId;
 }
 
@@ -70,7 +89,7 @@ export function getCorrelationWorkspaceId(): string | undefined {
  * Get the current user ID from correlation context
  */
 export function getCorrelationUserId(): string | undefined {
-  const context = correlationStorage.getStore();
+  const context = correlationStorage?.getStore();
   return context?.userId;
 }
 
@@ -78,7 +97,7 @@ export function getCorrelationUserId(): string | undefined {
  * Get the current job ID from correlation context
  */
 export function getCorrelationJobId(): string | undefined {
-  const context = correlationStorage.getStore();
+  const context = correlationStorage?.getStore();
   return context?.jobId;
 }
 
@@ -100,6 +119,11 @@ export function runWithCorrelation<T>(
     jobId: context.jobId,
     jobName: context.jobName,
   };
+
+  // In Edge runtime, just run the function without context
+  if (!correlationStorage) {
+    return fn();
+  }
 
   return correlationStorage.run(fullContext, fn);
 }
@@ -123,6 +147,11 @@ export async function runWithCorrelationAsync<T>(
     jobName: context.jobName,
   };
 
+  // In Edge runtime, just run the function without context
+  if (!correlationStorage) {
+    return fn();
+  }
+
   return correlationStorage.run(fullContext, fn);
 }
 
@@ -133,6 +162,10 @@ export async function runWithCorrelationAsync<T>(
 export function updateCorrelationContext(
   updates: Partial<CorrelationContext>
 ): void {
+  if (!correlationStorage) {
+    // In Edge runtime, silently ignore updates
+    return;
+  }
   const current = correlationStorage.getStore();
   if (!current) {
     throw new Error('No correlation context found');

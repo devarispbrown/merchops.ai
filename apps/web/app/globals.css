@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Calm color palette - muted blues and grays */
+    /* Calm color palette - muted blues and grays (MerchOps app) */
     --background: 0 0% 98%;
     --foreground: 220 15% 20%;
 
@@ -26,6 +26,14 @@
     --border: 210 15% 88%;
     --input: 210 15% 88%;
     --ring: 210 20% 45%;
+
+    /* Popover (Magic Patterns) */
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 20%;
+
+    /* Destructive state (Magic Patterns) */
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
 
     /* Success state - subtle green */
     --success: 150 25% 45%;
@@ -69,6 +77,12 @@
     --border: 220 15% 20%;
     --input: 220 15% 20%;
     --ring: 210 20% 60%;
+
+    --popover: 220 20% 15%;
+    --popover-foreground: 210 15% 92%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
 
     --success: 150 25% 55%;
     --success-light: 150 25% 15%;
