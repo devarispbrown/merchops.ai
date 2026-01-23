@@ -107,7 +107,11 @@ async function shopifyStatusHandler(_request: NextRequest) {
     'Shopify connection status retrieved'
   );
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, {
+    headers: {
+      'Cache-Control': 'private, max-age=300',
+    },
+  });
 }
 
 export const GET = withTracing(asyncHandler(shopifyStatusHandler));

@@ -53,17 +53,51 @@ export async function GET(
         "Fetching opportunity detail"
       );
 
-      // Fetch opportunity with events
+      // Fetch opportunity with events (optimized select for performance)
       const opportunity = await prisma.opportunity.findUnique({
         where: { id: opportunityId },
-        include: {
+        select: {
+          id: true,
+          workspace_id: true,
+          type: true,
+          priority_bucket: true,
+          why_now: true,
+          rationale: true,
+          impact_range: true,
+          counterfactual: true,
+          decay_at: true,
+          confidence: true,
+          state: true,
+          created_at: true,
+          updated_at: true,
           event_links: {
-            include: {
-              event: true,
+            select: {
+              event: {
+                select: {
+                  id: true,
+                  workspace_id: true,
+                  type: true,
+                  occurred_at: true,
+                  payload_json: true,
+                  dedupe_key: true,
+                  source: true,
+                  created_at: true,
+                },
+              },
             },
           },
           action_drafts: {
-            include: {
+            select: {
+              id: true,
+              workspace_id: true,
+              opportunity_id: true,
+              operator_intent: true,
+              execution_type: true,
+              payload_json: true,
+              editable_fields_json: true,
+              state: true,
+              created_at: true,
+              updated_at: true,
               executions: {
                 select: {
                   id: true,
@@ -132,6 +166,7 @@ export async function GET(
         status: 200,
         headers: {
           "X-Correlation-ID": correlationId,
+          "Cache-Control": "private, max-age=30",
         },
       });
     } catch (error) {

@@ -119,11 +119,23 @@ export function verifyHmac(query: Record<string, string>): boolean {
     .update(message)
     .digest('hex');
 
-  // Use timing-safe comparison
-  return crypto.timingSafeEqual(
-    Buffer.from(hmac),
-    Buffer.from(generatedHash)
-  );
+  // Convert to buffers for timing-safe comparison
+  const hmacBuffer = Buffer.from(hmac, 'utf8');
+  const generatedBuffer = Buffer.from(generatedHash, 'utf8');
+
+  // Validate buffer lengths match before comparison (prevents timing attacks)
+  if (hmacBuffer.length !== generatedBuffer.length) {
+    return false;
+  }
+
+  try {
+    // Use timing-safe comparison
+    return crypto.timingSafeEqual(hmacBuffer, generatedBuffer);
+  } catch (error) {
+    // timingSafeEqual throws if buffers have different lengths
+    // This should not happen due to length check above, but handle defensively
+    return false;
+  }
 }
 
 /**

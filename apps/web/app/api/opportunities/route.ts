@@ -101,14 +101,36 @@ export async function GET(request: NextRequest) {
         where.type = validated.type;
       }
 
-      // Query opportunities with events
+      // Query opportunities with events (optimized to reduce data transfer)
       const [opportunities, totalCount] = await Promise.all([
         prisma.opportunity.findMany({
           where,
-          include: {
+          select: {
+            id: true,
+            workspace_id: true,
+            type: true,
+            priority_bucket: true,
+            why_now: true,
+            rationale: true,
+            impact_range: true,
+            counterfactual: true,
+            decay_at: true,
+            confidence: true,
+            state: true,
+            created_at: true,
+            updated_at: true,
             event_links: {
-              include: {
-                event: true,
+              select: {
+                event: {
+                  select: {
+                    id: true,
+                    type: true,
+                    occurred_at: true,
+                    payload_json: true,
+                    source: true,
+                    created_at: true,
+                  },
+                },
               },
             },
             action_drafts: {
@@ -176,6 +198,7 @@ export async function GET(request: NextRequest) {
           status: 200,
           headers: {
             "X-Correlation-ID": correlationId,
+            "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
           },
         }
       );

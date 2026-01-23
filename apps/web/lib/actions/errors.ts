@@ -16,6 +16,7 @@ export const ActionErrorCode = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   UNAUTHORIZED: 'UNAUTHORIZED',
   INVALID_SESSION: 'INVALID_SESSION',
+  RATE_LIMITED: 'RATE_LIMITED',
 
   // Validation errors (2xxx)
   VALIDATION_ERROR: 'VALIDATION_ERROR',
@@ -127,6 +128,7 @@ export const ErrorMessages = {
   UNAUTHENTICATED: 'You must be signed in to perform this action.',
   UNAUTHORIZED: 'You do not have permission to perform this action.',
   INVALID_SESSION: 'Your session has expired. Please sign in again.',
+  RATE_LIMITED: 'Too many attempts. Please wait a moment and try again.',
 
   // Validation
   VALIDATION_ERROR: 'The information provided is invalid. Please check your input and try again.',
@@ -176,6 +178,13 @@ export const ActionErrors = {
     new ActionError(ActionErrorCode.INVALID_SESSION, 'Invalid session', {
       userMessage: ErrorMessages.INVALID_SESSION,
       statusCode: 401,
+    }),
+
+  rateLimited: (message?: string) =>
+    new ActionError(ActionErrorCode.RATE_LIMITED, message ?? 'Rate limit exceeded', {
+      userMessage: message ?? ErrorMessages.RATE_LIMITED,
+      statusCode: 429,
+      retryable: true,
     }),
 
   validationError: (message: string, details?: Record<string, unknown>) =>

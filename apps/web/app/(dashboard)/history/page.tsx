@@ -1,15 +1,47 @@
 'use client';
 
 import { ExecutionStatus } from '@prisma/client';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { ExecutionFilters } from '@/components/executions/ExecutionFilters';
-import { ExecutionList } from '@/components/executions/ExecutionList';
-import { TrackRecord } from '@/components/history/TrackRecord';
 import { Card } from '@/components/ui/Card';
 import { useConfidenceScores } from '@/lib/hooks/useConfidence';
 import { useExecutionsList } from '@/lib/hooks/useExecutions';
 import { formatNumber, formatPercentage } from '@/lib/utils/formatters';
+
+// Code splitting for heavy components
+const ExecutionFilters = dynamic(
+  () =>
+    import('@/components/executions/ExecutionFilters').then(
+      (mod) => mod.ExecutionFilters
+    ),
+  {
+    loading: () => <div className="h-20 bg-muted rounded animate-pulse" />,
+  }
+);
+
+const ExecutionList = dynamic(
+  () =>
+    import('@/components/executions/ExecutionList').then(
+      (mod) => mod.ExecutionList
+    ),
+  {
+    loading: () => (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+        ))}
+      </div>
+    ),
+  }
+);
+
+const TrackRecord = dynamic(
+  () => import('@/components/history/TrackRecord').then((mod) => mod.TrackRecord),
+  {
+    loading: () => <div className="h-32 bg-muted rounded animate-pulse" />,
+  }
+);
 
 export default function HistoryPage() {
   const [filters, setFilters] = useState<{

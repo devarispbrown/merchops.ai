@@ -18,6 +18,8 @@ import {
 } from '@/lib/actions/errors';
 import { validateFormData } from '@/lib/actions/validation';
 import { runWithCorrelationAsync, generateCorrelationId } from '@/lib/correlation';
+import { checkAuthRateLimitByIp, checkAuthRateLimitByEmail } from '@/lib/rate-limit';
+import { getClientIp } from '@/lib/request-helpers';
 import { prisma } from '@/server/db/client';
 import { logger } from '@/server/observability/logger';
 
@@ -66,6 +68,31 @@ export async function signUpAction(formData: FormData): Promise<SignUpResponse> 
       try {
         // Validate input
         const data = validateFormData(signUpSchema, formData);
+
+        // Check rate limits (both IP and email)
+        const clientIp = await getClientIp();
+        const ipRateLimit = checkAuthRateLimitByIp(clientIp);
+        const emailRateLimit = checkAuthRateLimitByEmail(data.email);
+
+        if (!ipRateLimit.allowed) {
+          logger.warn(
+            { email: data.email, ip: clientIp, resetInSeconds: ipRateLimit.resetInSeconds },
+            'Signup rate limit exceeded (IP)'
+          );
+          throw ActionErrors.rateLimited(
+            `Too many signup attempts. Please try again in ${ipRateLimit.resetInSeconds} seconds.`
+          );
+        }
+
+        if (!emailRateLimit.allowed) {
+          logger.warn(
+            { email: data.email, resetInSeconds: emailRateLimit.resetInSeconds },
+            'Signup rate limit exceeded (email)'
+          );
+          throw ActionErrors.rateLimited(
+            `Too many signup attempts for this email. Please try again in ${emailRateLimit.resetInSeconds} seconds.`
+          );
+        }
 
         logger.info({ email: data.email }, 'User signup attempt');
 
@@ -138,6 +165,31 @@ export async function signInAction(formData: FormData): Promise<SignInResponse> 
       try {
         // Validate input
         const data = validateFormData(signInSchema, formData);
+
+        // Check rate limits (both IP and email)
+        const clientIp = await getClientIp();
+        const ipRateLimit = checkAuthRateLimitByIp(clientIp);
+        const emailRateLimit = checkAuthRateLimitByEmail(data.email);
+
+        if (!ipRateLimit.allowed) {
+          logger.warn(
+            { email: data.email, ip: clientIp, resetInSeconds: ipRateLimit.resetInSeconds },
+            'Signin rate limit exceeded (IP)'
+          );
+          throw ActionErrors.rateLimited(
+            `Too many signin attempts. Please try again in ${ipRateLimit.resetInSeconds} seconds.`
+          );
+        }
+
+        if (!emailRateLimit.allowed) {
+          logger.warn(
+            { email: data.email, resetInSeconds: emailRateLimit.resetInSeconds },
+            'Signin rate limit exceeded (email)'
+          );
+          throw ActionErrors.rateLimited(
+            `Too many signin attempts for this email. Please try again in ${emailRateLimit.resetInSeconds} seconds.`
+          );
+        }
 
         logger.info({ email: data.email }, 'User signin attempt');
 

@@ -25,5 +25,6 @@ declare module "next-auth/jwt" {
     id: string;
     email: string;
     workspaceId: string;
+    jti?: string; // JWT ID for future revocation capability
   }
 }

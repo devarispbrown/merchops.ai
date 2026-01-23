@@ -1,11 +1,22 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-import { ConnectionStatus } from '@/components/shopify/ConnectionStatus';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useShopifyConnection } from '@/lib/hooks/useShopifyConnection';
+
+// Code splitting for Shopify connection status
+const ConnectionStatus = dynamic(
+  () =>
+    import('@/components/shopify/ConnectionStatus').then(
+      (mod) => mod.ConnectionStatus
+    ),
+  {
+    loading: () => <div className="h-6 w-32 bg-muted rounded animate-pulse" />,
+  }
+);
 
 export default function SettingsPage() {
   const { connection, isLoading } = useShopifyConnection();

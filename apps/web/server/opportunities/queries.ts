@@ -244,7 +244,7 @@ export async function searchOpportunities(
 }
 
 /**
- * Get opportunity statistics
+ * Get opportunity statistics (optimized with Prisma aggregations)
  */
 export async function getOpportunityStats(
   workspaceId: string,
@@ -255,12 +255,41 @@ export async function getOpportunityStats(
   by_priority: Record<PriorityBucket, number>;
   average_confidence: number;
 }> {
-  const opportunities = await prisma.opportunity.findMany({
-    where: { workspace_id: workspaceId },
-  });
+  // Use Prisma aggregations instead of loading all records into memory
+  const [totalCount, stateGroups, priorityGroups, confidenceAvg] = await Promise.all([
+    // Total count
+    prisma.opportunity.count({
+      where: { workspace_id: workspaceId },
+    }),
 
-  const total = opportunities.length;
+    // Group by state
+    prisma.opportunity.groupBy({
+      by: ['state'],
+      where: { workspace_id: workspaceId },
+      _count: {
+        id: true,
+      },
+    }),
 
+    // Group by priority
+    prisma.opportunity.groupBy({
+      by: ['priority_bucket'],
+      where: { workspace_id: workspaceId },
+      _count: {
+        id: true,
+      },
+    }),
+
+    // Average confidence
+    prisma.opportunity.aggregate({
+      where: { workspace_id: workspaceId },
+      _avg: {
+        confidence: true,
+      },
+    }),
+  ]);
+
+  // Initialize with zeros
   const by_state: Record<OpportunityState, number> = {
     [OpportunityState.new]: 0,
     [OpportunityState.viewed]: 0,
@@ -277,18 +306,19 @@ export async function getOpportunityStats(
     [PriorityBucket.low]: 0,
   };
 
-  let totalConfidence = 0;
-
-  for (const opp of opportunities) {
-    by_state[opp.state]++;
-    by_priority[opp.priority_bucket]++;
-    totalConfidence += opp.confidence;
+  // Populate from grouped results
+  for (const group of stateGroups) {
+    by_state[group.state] = group._count.id;
   }
 
-  const average_confidence = total > 0 ? totalConfidence / total : 0;
+  for (const group of priorityGroups) {
+    by_priority[group.priority_bucket] = group._count.id;
+  }
+
+  const average_confidence = confidenceAvg._avg.confidence ?? 0;
 
   return {
-    total,
+    total: totalCount,
     by_state,
     by_priority,
     average_confidence: parseFloat(average_confidence.toFixed(3)),

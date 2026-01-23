@@ -4,6 +4,7 @@
 
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { randomUUID } from "crypto";
 import { prisma } from "../db/client";
 import { credentialsProvider } from "./providers";
 
@@ -16,7 +17,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Use JWT strategy for session management (stateless, scalable)
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 7 * 24 * 60 * 60, // 7 days (reduced from 30 days for better security)
   },
 
   // Authentication providers
@@ -38,6 +39,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.workspaceId = user.workspace_id;
+        // Add JWT ID (JTI) for future revocation capability
+        token.jti = randomUUID();
       }
 
       // Update session trigger (e.g., from client-side update)

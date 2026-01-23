@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCorrelationId } from '@/lib/correlation';
+import { validateWebhook } from '@/lib/webhook-deduplication';
 import { prisma } from '@/server/db/client';
 import { logger } from '@/server/observability/logger';
 import {
@@ -73,6 +74,28 @@ export async function POST(request: NextRequest) {
       },
       'Webhook details'
     );
+
+    // Check for duplicate/replay webhooks
+    const timestamp = request.headers.get('x-shopify-webhook-timestamp');
+    const webhookValidation = validateWebhook(webhookId, timestamp);
+
+    if (!webhookValidation.valid) {
+      logger.warn(
+        {
+          correlationId,
+          shop,
+          topic,
+          webhookId,
+          timestamp,
+          reason: webhookValidation.reason,
+          details: webhookValidation.details,
+        },
+        'Webhook validation failed - possible replay attack'
+      );
+
+      // Return 200 to prevent Shopify retries for replays
+      return NextResponse.json({ received: false, reason: webhookValidation.reason });
+    }
 
     // Verify HMAC signature
     if (!verifyWebhookHmac(rawBody, hmac)) {

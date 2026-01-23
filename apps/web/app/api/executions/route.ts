@@ -159,6 +159,7 @@ export async function GET(request: NextRequest) {
           status: 200,
           headers: {
             "X-Correlation-ID": correlationId,
+            "Cache-Control": "private, max-age=30",
           },
         }
       );

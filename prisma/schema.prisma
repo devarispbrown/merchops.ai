@@ -8,6 +8,12 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Production: Use connection pooling via DATABASE_URL with pooling parameters
+  // Examples:
+  // - Supabase: Use connection pooling port 6543 (pooler.supabase.com)
+  // - PgBouncer: Add ?pgbouncer=true&connection_limit=10
+  // - Prisma Accelerate: Use accelerate connection string
+  // Recommended settings: connection_limit=10, pool_timeout=20
 }
 
 // ============================================================================
@@ -230,6 +236,9 @@ model Opportunity {
   @@index([workspace_id, priority_bucket])
   @@index([workspace_id, created_at])
   @@index([decay_at])
+  // Performance: Composite indexes for common query patterns
+  @@index([workspace_id, state, priority_bucket])
+  @@index([workspace_id, type, state])
 }
 
 // Link table: Opportunities to Events (many-to-many)

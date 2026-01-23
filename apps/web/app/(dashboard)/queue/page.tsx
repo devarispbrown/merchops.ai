@@ -1,13 +1,42 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { NoOpportunities } from '@/components/empty-states/NoOpportunities';
-import { NoShopifyConnection } from '@/components/empty-states/NoShopifyConnection';
-import { OpportunityCard } from '@/components/opportunities/OpportunityCard';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { useShopifyConnection } from '@/lib/hooks/useShopifyConnection';
+
+// Code splitting for heavy components
+const NoOpportunities = dynamic(
+  () =>
+    import('@/components/empty-states/NoOpportunities').then(
+      (mod) => mod.NoOpportunities
+    ),
+  {
+    loading: () => <div className="h-48 bg-muted rounded animate-pulse" />,
+  }
+);
+
+const NoShopifyConnection = dynamic(
+  () =>
+    import('@/components/empty-states/NoShopifyConnection').then(
+      (mod) => mod.NoShopifyConnection
+    ),
+  {
+    loading: () => <div className="h-48 bg-muted rounded animate-pulse" />,
+  }
+);
+
+const OpportunityCard = dynamic(
+  () =>
+    import('@/components/opportunities/OpportunityCard').then(
+      (mod) => mod.OpportunityCard
+    ),
+  {
+    loading: () => <div className="h-40 bg-muted rounded-lg animate-pulse" />,
+  }
+);
 
 // Mock data for initial UI development
 const mockOpportunities = [
