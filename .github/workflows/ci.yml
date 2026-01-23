@@ -271,6 +271,17 @@ jobs:
           NEXTAUTH_SECRET: test-secret-for-ci-only
           NEXTAUTH_URL: http://localhost:3000
 
+      - name: Start production server
+        run: |
+          pnpm --filter @merchops/web start &
+          sleep 5
+          curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:3000 || exit 1
+        env:
+          DATABASE_URL: postgresql://merchops_test:test_password@localhost:5432/merchops_test
+          REDIS_URL: redis://localhost:6379
+          NEXTAUTH_SECRET: test-secret-for-ci-only
+          NEXTAUTH_URL: http://localhost:3000
+
       - name: Run E2E tests
         run: pnpm test:e2e
         env:
