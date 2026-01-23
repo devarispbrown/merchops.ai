@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: merchops-config
+  namespace: merchops
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  AI_PROVIDER: "anthropic"
+  AI_MODEL_TIER: "balanced"
+  AI_MAX_TOKENS: "2000"
+  AI_TEMPERATURE: "0.7"
+  SHOPIFY_SCOPES: "read_products,write_products,read_orders,read_customers,read_inventory,write_inventory,write_discounts,read_price_rules,write_price_rules"

@@ -4,6 +4,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@merchops/shared'],
+  output: 'standalone',
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

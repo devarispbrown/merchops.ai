@@ -1,0 +1,1208 @@
+openapi: 3.1.0
+info:
+  title: MerchOps API
+  description: |
+    MerchOps Beta MVP API - A calm operator console for Shopify merchants.
+
+    ## Overview
+
+    MerchOps detects store signals, turns them into prioritized opportunities,
+    drafts safe actions, and executes only with explicit approval.
+
+    ## Authentication
+
+    All API endpoints (except /api/health) require authentication via session cookies.
+    Login at /login to obtain a session.
+
+    ## Rate Limiting
+
+    API requests are rate-limited to prevent abuse. Headers include:
+    - `X-RateLimit-Limit`: Maximum requests per window
+    - `X-RateLimit-Remaining`: Remaining requests in current window
+
+    ## Correlation IDs
+
+    All requests include `X-Correlation-ID` header for tracing and debugging.
+  version: 1.0.0
+  contact:
+    name: MerchOps Support
+    url: https://merchops.ai/support
+  license:
+    name: Proprietary
+    url: https://merchops.ai/terms
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://api.merchops.ai
+    description: Production
+
+tags:
+  - name: Health
+    description: System health and status endpoints
+  - name: Auth
+    description: Authentication endpoints
+  - name: Opportunities
+    description: Opportunity management - ranked suggestions from store signals
+  - name: Drafts
+    description: Action draft management - editable action templates
+  - name: Executions
+    description: Execution tracking - approved action results
+  - name: Outcomes
+    description: Learning loop - execution outcome tracking
+  - name: Confidence
+    description: Confidence scoring per operator intent
+  - name: Shopify
+    description: Shopify integration endpoints
+  - name: Admin
+    description: Administrative endpoints (requires elevated permissions)
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Public health check
+      description: Returns minimal health status for load balancers and monitoring services
+      operationId: getHealth
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/admin/health:
+    get:
+      tags:
+        - Admin
+        - Health
+      summary: Detailed health check
+      description: Returns detailed diagnostics including database and Redis status
+      operationId: getAdminHealth
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminHealthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/signup:
+    post:
+      tags:
+        - Auth
+      summary: Create new account
+      description: Register a new user account with email and password
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+
+  /api/opportunities:
+    get:
+      tags:
+        - Opportunities
+      summary: List opportunities
+      description: |
+        Returns paginated list of opportunities for the authenticated workspace.
+        Opportunities are ranked suggestions derived from store signals.
+      operationId: listOpportunities
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: state
+          in: query
+          description: Filter by opportunity state
+          schema:
+            $ref: '#/components/schemas/OpportunityState'
+        - name: priority
+          in: query
+          description: Filter by priority bucket
+          schema:
+            $ref: '#/components/schemas/PriorityBucket'
+        - name: type
+          in: query
+          description: Filter by opportunity type
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpportunitiesListResponse'
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/opportunities/{id}:
+    get:
+      tags:
+        - Opportunities
+      summary: Get opportunity details
+      description: Returns detailed information for a specific opportunity
+      operationId: getOpportunity
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OpportunityId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opportunity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Opportunities
+      summary: Update opportunity
+      description: Update opportunity state (e.g., mark as viewed, dismissed)
+      operationId: updateOpportunity
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OpportunityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOpportunityRequest'
+      responses:
+        '200':
+          description: Opportunity updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opportunity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/drafts:
+    get:
+      tags:
+        - Drafts
+      summary: List action drafts
+      description: Returns paginated list of action drafts for the workspace
+      operationId: listDrafts
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: opportunity_id
+          in: query
+          description: Filter by opportunity ID
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          description: Filter by draft state
+          schema:
+            $ref: '#/components/schemas/DraftState'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftsListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Drafts
+      summary: Create action draft
+      description: Create a new action draft for an opportunity
+      operationId: createDraft
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftRequest'
+      responses:
+        '201':
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDraftResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/drafts/{id}:
+    get:
+      tags:
+        - Drafts
+      summary: Get draft details
+      description: Returns detailed information for a specific draft
+      operationId: getDraft
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DraftId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Draft'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Drafts
+      summary: Update draft
+      description: Update draft editable fields
+      operationId: updateDraft
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DraftId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDraftRequest'
+      responses:
+        '200':
+          description: Draft updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Draft'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/drafts/{id}/approve:
+    post:
+      tags:
+        - Drafts
+      summary: Approve and execute draft
+      description: Approve the draft and trigger execution
+      operationId: approveDraft
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DraftId'
+      responses:
+        '200':
+          description: Draft approved, execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/executions:
+    get:
+      tags:
+        - Executions
+      summary: List executions
+      description: Returns paginated list of executions for the workspace
+      operationId: listExecutions
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by execution status
+          schema:
+            $ref: '#/components/schemas/ExecutionStatus'
+        - name: type
+          in: query
+          description: Filter by execution type
+          schema:
+            $ref: '#/components/schemas/ExecutionType'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionsListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executions/{id}:
+    get:
+      tags:
+        - Executions
+      summary: Get execution details
+      description: Returns detailed information for a specific execution
+      operationId: getExecution
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/executions/{id}/rollback:
+    post:
+      tags:
+        - Executions
+      summary: Rollback execution
+      description: Attempt to rollback a completed execution
+      operationId: rollbackExecution
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Rollback initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackResponse'
+        '400':
+          description: Rollback not possible
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/outcomes:
+    get:
+      tags:
+        - Outcomes
+      summary: List outcomes
+      description: Returns list of computed outcomes
+      operationId: listOutcomes
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomesListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/outcomes/{executionId}:
+    get:
+      tags:
+        - Outcomes
+      summary: Get outcome for execution
+      description: Returns outcome for a specific execution
+      operationId: getOutcome
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outcome'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/confidence:
+    get:
+      tags:
+        - Confidence
+      summary: Get confidence scores
+      description: Returns confidence scores per operator intent
+      operationId: getConfidence
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfidenceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/shopify/status:
+    get:
+      tags:
+        - Shopify
+      summary: Get Shopify connection status
+      description: Returns current Shopify connection status for workspace
+      operationId: getShopifyStatus
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopifyStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/shopify/auth:
+    get:
+      tags:
+        - Shopify
+      summary: Initiate Shopify OAuth
+      description: Redirects to Shopify OAuth authorization
+      operationId: initiateShopifyAuth
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: shop
+          in: query
+          required: true
+          description: Shopify store domain (e.g., mystore.myshopify.com)
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to Shopify
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/shopify/callback:
+    get:
+      tags:
+        - Shopify
+      summary: Shopify OAuth callback
+      description: Handles Shopify OAuth callback
+      operationId: shopifyCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: shop
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to dashboard
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/shopify/disconnect:
+    post:
+      tags:
+        - Shopify
+      summary: Disconnect Shopify
+      description: Disconnect Shopify store from workspace
+      operationId: disconnectShopify
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Disconnected successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/shopify/webhooks:
+    post:
+      tags:
+        - Shopify
+      summary: Shopify webhook handler
+      description: Receives and processes Shopify webhooks
+      operationId: handleShopifyWebhook
+      parameters:
+        - name: X-Shopify-Topic
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Shopify-Hmac-SHA256
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Shopify-Shop-Domain
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+        '401':
+          description: Invalid HMAC signature
+        '500':
+          description: Processing error
+
+  /api/admin/jobs:
+    get:
+      tags:
+        - Admin
+      summary: List job queues
+      description: Returns status of all job queues
+      operationId: listJobQueues
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobQueuesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/events/replay:
+    post:
+      tags:
+        - Admin
+      summary: Replay events
+      description: Replay events for testing and debugging
+      operationId: replayEvents
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayEventsRequest'
+      responses:
+        '200':
+          description: Events replayed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: Session cookie from NextAuth
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page (max 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    OpportunityId:
+      name: id
+      in: path
+      required: true
+      description: Opportunity UUID
+      schema:
+        type: string
+        format: uuid
+
+    DraftId:
+      name: id
+      in: path
+      required: true
+      description: Draft UUID
+      schema:
+        type: string
+        format: uuid
+
+    ExecutionId:
+      name: id
+      in: path
+      required: true
+      description: Execution UUID
+      schema:
+        type: string
+        format: uuid
+
+  headers:
+    CorrelationId:
+      description: Unique request correlation ID for tracing
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        timestamp:
+          type: string
+          format: date-time
+
+    AdminHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        database:
+          type: object
+          properties:
+            status:
+              type: string
+            latencyMs:
+              type: number
+        redis:
+          type: object
+          properties:
+            status:
+              type: string
+            latencyMs:
+              type: number
+
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    SignupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    OpportunityState:
+      type: string
+      enum: [new, viewed, approved, executed, resolved, dismissed, expired]
+
+    PriorityBucket:
+      type: string
+      enum: [high, medium, low]
+
+    Opportunity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        priority_bucket:
+          $ref: '#/components/schemas/PriorityBucket'
+        why_now:
+          type: string
+          description: Plain language explanation of why this opportunity surfaced now
+        rationale:
+          type: string
+          description: Store-specific rationale
+        impact_range:
+          type: object
+          description: Expected impact range
+        counterfactual:
+          type: string
+          description: What happens if no action is taken
+        decay_at:
+          type: string
+          format: date-time
+          description: When this opportunity expires
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        state:
+          $ref: '#/components/schemas/OpportunityState'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        action_drafts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DraftSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        payload_json:
+          type: object
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    OpportunitiesListResponse:
+      type: object
+      properties:
+        opportunities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Opportunity'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    UpdateOpportunityRequest:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/OpportunityState'
+
+    DraftState:
+      type: string
+      enum: [pending, approved, rejected, expired]
+
+    OperatorIntent:
+      type: string
+      enum: [reduce_inventory_risk, reengage_dormant, protect_margin]
+      description: User-facing intent categories
+
+    ExecutionType:
+      type: string
+      enum: [discount_draft, winback_email, pause_product]
+
+    DraftSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: '#/components/schemas/DraftState'
+        operator_intent:
+          $ref: '#/components/schemas/OperatorIntent'
+        execution_type:
+          $ref: '#/components/schemas/ExecutionType'
+
+    Draft:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+        operator_intent:
+          $ref: '#/components/schemas/OperatorIntent'
+        execution_type:
+          $ref: '#/components/schemas/ExecutionType'
+        payload_json:
+          type: object
+          description: Action payload to be executed
+        editable_fields_json:
+          type: object
+          description: Fields that can be edited by user
+        state:
+          $ref: '#/components/schemas/DraftState'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DraftsListResponse:
+      type: object
+      properties:
+        drafts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Draft'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateDraftRequest:
+      type: object
+      required:
+        - opportunityId
+        - operatorIntent
+        - executionType
+      properties:
+        opportunityId:
+          type: string
+          format: uuid
+        operatorIntent:
+          $ref: '#/components/schemas/OperatorIntent'
+        executionType:
+          $ref: '#/components/schemas/ExecutionType'
+        context:
+          type: object
+
+    CreateDraftResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        draft:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            payload:
+              type: object
+            editableFields:
+              type: object
+
+    UpdateDraftRequest:
+      type: object
+      properties:
+        edits:
+          type: object
+          description: Key-value pairs of field edits
+
+    ApproveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        executionId:
+          type: string
+          format: uuid
+
+    ExecutionStatus:
+      type: string
+      enum: [pending, running, success, failed, rollback_pending, rollback_success, rollback_failed]
+
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        action_draft_id:
+          type: string
+          format: uuid
+        request_payload_json:
+          type: object
+        provider_response_json:
+          type: object
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        error_code:
+          type: string
+        error_message:
+          type: string
+        idempotency_key:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+
+    ExecutionsListResponse:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Execution'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    RollbackResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    OutcomeType:
+      type: string
+      enum: [helped, neutral, hurt]
+
+    Outcome:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+          format: uuid
+        outcome:
+          $ref: '#/components/schemas/OutcomeType'
+        evidence_json:
+          type: object
+          description: Computed evidence supporting the outcome
+        computed_at:
+          type: string
+          format: date-time
+
+    OutcomesListResponse:
+      type: object
+      properties:
+        outcomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outcome'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ConfidenceResponse:
+      type: object
+      properties:
+        confidence:
+          type: object
+          properties:
+            reduce_inventory_risk:
+              type: number
+              minimum: 0
+              maximum: 1
+            reengage_dormant:
+              type: number
+              minimum: 0
+              maximum: 1
+            protect_margin:
+              type: number
+              minimum: 0
+              maximum: 1
+        recentOutcomes:
+          type: object
+
+    ShopifyStatusResponse:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        store_domain:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        connected_at:
+          type: string
+          format: date-time
+
+    JobQueuesResponse:
+      type: object
+      properties:
+        queues:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              waiting:
+                type: integer
+              active:
+                type: integer
+              completed:
+                type: integer
+              failed:
+                type: integer
+
+    ReplayEventsRequest:
+      type: object
+      properties:
+        eventIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer

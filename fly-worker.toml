@@ -1,0 +1,24 @@
+# Fly.io Configuration for MerchOps Background Worker
+# Deploy this separately from the main web app
+
+app = "merchops-worker"
+primary_region = "sjc"  # Should match main app region
+
+[build]
+  [build.args]
+    NODE_VERSION = "20"
+
+[env]
+  NODE_ENV = "production"
+
+# No HTTP service for background worker
+# Worker just processes jobs from Redis queue
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Deployment configuration
+[deploy]
+  strategy = "immediate"  # Workers can restart immediately

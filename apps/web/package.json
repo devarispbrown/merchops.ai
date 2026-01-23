@@ -37,7 +37,8 @@
     "react-dom": "^18.3.0",
     "resend": "^6.8.0",
     "tailwind-merge": "^2.2.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "swagger-ui-react": "^5.17.14"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0",
@@ -56,6 +57,7 @@
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0",
-    "vitest-mock-extended": "^3.1.0"
+    "vitest-mock-extended": "^3.1.0",
+    "@types/swagger-ui-react": "^4.18.3"
   }
 }

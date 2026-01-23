@@ -1,0 +1,225 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merchops-web
+  namespace: merchops
+  labels:
+    app: merchops
+    component: web
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: merchops
+      component: web
+  template:
+    metadata:
+      labels:
+        app: merchops
+        component: web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: web
+        image: merchops/web:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: redis-url
+        - name: NEXTAUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: nextauth-secret
+        - name: NEXTAUTH_URL
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: nextauth-url
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: encryption-key
+        - name: SHOPIFY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: shopify-client-id
+        - name: SHOPIFY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: shopify-client-secret
+        - name: SHOPIFY_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: shopify-webhook-secret
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: anthropic-api-key
+              optional: true
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: openai-api-key
+              optional: true
+        - name: EMAIL_PROVIDER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: email-provider-api-key
+              optional: true
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: sentry-dsn
+              optional: true
+        envFrom:
+        - configMapRef:
+            name: merchops-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 40
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merchops-worker
+  namespace: merchops
+  labels:
+    app: merchops
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: merchops
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: merchops
+        component: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: worker
+        image: merchops/web:latest
+        imagePullPolicy: Always
+        command: ["node", "-r", "tsx/register", "apps/web/src/server/jobs/worker.ts"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: redis-url
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: encryption-key
+        - name: SHOPIFY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: shopify-client-id
+        - name: SHOPIFY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: shopify-client-secret
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: anthropic-api-key
+              optional: true
+        - name: EMAIL_PROVIDER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: merchops-secrets
+              key: email-provider-api-key
+              optional: true
+        envFrom:
+        - configMapRef:
+            name: merchops-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+      restartPolicy: Always

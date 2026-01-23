@@ -1,0 +1,58 @@
+# ============================================================================
+# MerchOps - Docker Compose Development Overrides
+# Local development-specific configurations
+# This file is automatically merged with docker-compose.yml
+# ============================================================================
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+      args:
+        NODE_ENV: development
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      NEXT_TELEMETRY_DISABLED: 1
+    volumes:
+      # Hot reload support - mount source code
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - ./prisma:/app/prisma
+      # Exclude node_modules from bind mount for performance
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    command: ["pnpm", "--filter", "@merchops/web", "dev"]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - ./prisma:/app/prisma
+      - /app/node_modules
+      - /app/apps/web/node_modules
+
+  postgres:
+    environment:
+      POSTGRES_DB: merchops_dev
+      POSTGRES_USER: merchops
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

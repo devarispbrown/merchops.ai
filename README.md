@@ -53,76 +53,119 @@ Flow: Shopify --> Webhooks --> Events --> Opportunities --> Drafts --> Approval 
 | Testing | Playwright + Vitest | E2E and unit testing |
 | Observability | Pino + Sentry | Structured logging and error tracking |
 
-## Local Development
+## Quick Start
 
-### Prerequisites
+### Local Development
 
+**Prerequisites:**
 - Node.js 20+ (LTS recommended)
 - pnpm 8+ (`npm install -g pnpm`)
 - Docker (for PostgreSQL and Redis)
 
-### Setup
+**Setup:**
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-org/merchops.ai.git
-   cd merchops.ai
-   ```
+```bash
+# Clone and install
+git clone https://github.com/your-org/merchops.ai.git
+cd merchops.ai
+pnpm install
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+# Environment setup
+cp .env.example .env.local
+# Edit .env.local with your configuration
 
-3. **Environment configuration**
-   ```bash
-   cp .env.example .env.local
-   ```
-   Edit `.env.local` with your configuration (see Environment Variables below).
+# Start infrastructure
+docker compose up -d
 
-4. **Start infrastructure**
-   ```bash
-   # Start PostgreSQL and Redis via Docker
-   docker compose up -d
-   ```
+# Database setup
+pnpm prisma migrate dev
+pnpm prisma generate
 
-5. **Database setup**
-   ```bash
-   # Run migrations
-   pnpm prisma migrate dev
+# Start app and workers
+pnpm dev                    # Terminal 1
+pnpm workers                # Terminal 2
+```
 
-   # Generate Prisma client
-   pnpm prisma generate
-   ```
+Visit `http://localhost:3000` to access the application.
 
-6. **Start the development server**
-   ```bash
-   pnpm dev
-   ```
-   The app will be available at `http://localhost:3000`.
+**Full guide:** [Local Development Documentation](./docs/local-development.md)
 
-7. **Start background workers** (in a separate terminal)
-   ```bash
-   pnpm workers
-   ```
+### Production Deployment
+
+Deploy MerchOps to production using any of these platforms:
+
+| Platform | Setup Time | Complexity | Free Tier | Docs |
+|----------|------------|------------|-----------|------|
+| **Render** (Recommended) | 15 min | Low | ✅ | [Guide](./docs/deployment/README.md#render-recommended) |
+| Railway.app | 20 min | Low | ✅ | [Guide](./docs/deployment/README.md#railwayapp) |
+| Fly.io | 30 min | Medium | ✅ | [Guide](./docs/deployment/README.md#flyio) |
+| Vercel + External | 45 min | Medium | ⚠️ Partial | [Guide](./docs/deployment/README.md#vercel--external-services) |
+
+**Quick Deploy with Render:**
+
+1. Push code to GitHub
+2. [Deploy with Render Blueprint](https://render.com/deploy) - `render.yaml` included
+3. Set required environment variables
+4. Run database migrations
+5. Verify health check: `https://your-app.onrender.com/api/health`
+
+**Complete deployment guide:** [Deployment Documentation](./docs/deployment/README.md)
+
+**Environment variables:** [Environment Variables Reference](./docs/deployment/env-vars.md)
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `REDIS_URL` | Yes | Redis connection string for BullMQ |
-| `NEXTAUTH_SECRET` | Yes | Secret for NextAuth session encryption |
-| `NEXTAUTH_URL` | Yes | Base URL of the application |
-| `SHOPIFY_CLIENT_ID` | Yes | Shopify app client ID |
-| `SHOPIFY_CLIENT_SECRET` | Yes | Shopify app client secret |
-| `SHOPIFY_SCOPES` | Yes | OAuth scopes (space-separated) |
-| `SHOPIFY_WEBHOOK_SECRET` | Yes | Secret for HMAC webhook verification |
-| `ENCRYPTION_KEY` | Yes | 32-byte key for encrypting tokens at rest |
-| `EMAIL_PROVIDER_API_KEY` | No | API key for email provider (Postmark/SendGrid) |
-| `EMAIL_PROVIDER_SANDBOX` | No | Set to `true` for sandbox mode |
-| `SENTRY_DSN` | No | Sentry DSN for error tracking |
-| `LOG_LEVEL` | No | Pino log level (default: `info`) |
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string for BullMQ
+- `NEXTAUTH_SECRET` - Session encryption key (generate: `openssl rand -base64 32`)
+- `NEXTAUTH_URL` - Application base URL
+- `SHOPIFY_CLIENT_ID` - Shopify OAuth client ID
+- `SHOPIFY_CLIENT_SECRET` - Shopify OAuth client secret
+- `SHOPIFY_SCOPES` - OAuth scopes (see `.env.example`)
+- `SHOPIFY_WEBHOOK_SECRET` - HMAC verification secret
+- `ENCRYPTION_KEY` - Token encryption key (generate: `openssl rand -hex 32`)
+- `AI_PROVIDER` - AI provider: `anthropic`, `openai`, or `ollama`
+- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` - AI provider credentials
+- `EMAIL_PROVIDER_API_KEY` - Resend/SendGrid API key
+
+**Optional:**
+- `SENTRY_DSN` - Sentry error tracking
+- `LOG_LEVEL` - Logging verbosity (default: `info`)
+- `AI_MODEL_TIER` - Model tier: `fast`, `balanced`, `powerful` (default: `balanced`)
+
+**Complete reference:** [Environment Variables Documentation](./docs/deployment/env-vars.md)
+
+## API Documentation
+
+MerchOps provides interactive API documentation via Swagger UI.
+
+### Accessing API Docs
+
+- **Swagger UI:** Visit `/api-docs` in your browser
+- **OpenAPI Spec:** Download at `/openapi.yaml`
+
+### API Overview
+
+| Category | Description |
+|----------|-------------|
+| **Health** | System status and diagnostics |
+| **Auth** | User registration and authentication |
+| **Opportunities** | Ranked suggestions from store signals |
+| **Drafts** | Editable action templates |
+| **Executions** | Approved action results and tracking |
+| **Outcomes** | Learning loop and execution outcomes |
+| **Confidence** | Confidence scores per operator intent |
+| **Shopify** | Store integration and webhooks |
+| **Admin** | Administrative diagnostics |
+
+### Authentication
+
+All API endpoints (except `/api/health`) require session authentication. Login at `/login` to obtain a session cookie.
+
+### Correlation IDs
+
+Every request includes an `X-Correlation-ID` header for tracing and debugging across services.
 
 ## Running Tests
 
