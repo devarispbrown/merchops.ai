@@ -1,7 +1,7 @@
 // Workspace Scoping Utilities
 // Ensures strict multi-tenant isolation in all database queries
 
-import { getWorkspaceId, verifyWorkspaceAccess } from "./session";
+import { getWorkspaceId } from "./session";
 import { Prisma } from "@prisma/client";
 
 /**
@@ -45,7 +45,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
     query: {
       // Automatically add workspace_id to all model queries
       $allModels: {
-        async findMany({ model, operation, args, query }: any) {
+        async findMany({ model: _model, operation: _operation, args, query }: any) {
           // Add workspace_id to where clause if model has it
           if (args.where) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -56,7 +56,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async findUnique({ model, operation, args, query }: any) {
+        async findUnique({ model: _model, operation: _operation, args, query }: any) {
           // Add workspace_id to where clause
           if (args.where) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -65,7 +65,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async findFirst({ model, operation, args, query }: any) {
+        async findFirst({ model: _model, operation: _operation, args, query }: any) {
           // Add workspace_id to where clause
           if (args.where) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -76,7 +76,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async create({ model, operation, args, query }: any) {
+        async create({ model: _model, operation: _operation, args, query }: any) {
           // Automatically add workspace_id to data
           if (args.data) {
             args.data = { ...args.data, workspace_id: workspaceId };
@@ -85,7 +85,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async update({ model, operation, args, query }: any) {
+        async update({ model: _model, operation: _operation, args, query }: any) {
           // Verify workspace_id in where clause
           if (args.where && !args.where.workspace_id) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -94,7 +94,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async updateMany({ model, operation, args, query }: any) {
+        async updateMany({ model: _model, operation: _operation, args, query }: any) {
           // Add workspace_id to where clause
           if (args.where) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -105,7 +105,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async delete({ model, operation, args, query }: any) {
+        async delete({ model: _model, operation: _operation, args, query }: any) {
           // Verify workspace_id in where clause
           if (args.where && !args.where.workspace_id) {
             args.where = { ...args.where, workspace_id: workspaceId };
@@ -114,7 +114,7 @@ export function createWorkspaceScopedClient(prisma: any, workspaceId: string) {
           return query(args);
         },
 
-        async deleteMany({ model, operation, args, query }: any) {
+        async deleteMany({ model: _model, operation: _operation, args, query }: any) {
           // Add workspace_id to where clause
           if (args.where) {
             args.where = { ...args.where, workspace_id: workspaceId };

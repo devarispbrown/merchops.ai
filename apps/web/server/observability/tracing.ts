@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   generateCorrelationId,
   extractCorrelationIdFromHeaders,
-  addCorrelationIdToHeaders,
   runWithCorrelationAsync,
 } from '../../lib/correlation';
 import { logger } from './logger';
@@ -39,12 +38,12 @@ interface RequestContext {
 export function withTracing(
   handler: (
     request: NextRequest,
-    context?: { params?: Record<string, string> }
+    context?: { params?: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
   return async (
     request: NextRequest,
-    context?: { params?: Record<string, string> }
+    context?: { params?: Promise<Record<string, string>> }
   ): Promise<NextResponse> => {
     const startTime = Date.now();
 

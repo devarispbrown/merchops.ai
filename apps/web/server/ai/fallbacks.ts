@@ -21,7 +21,7 @@ import type {
 export function generateOpportunityRationaleFallback(
   input: OpportunityRationaleInput
 ): OpportunityRationaleOutput {
-  const { opportunityType, operatorIntent, storeContext } = input;
+  const { opportunityType: _opportunityType, operatorIntent, storeContext } = input;
 
   let rationale = `An opportunity to ${operatorIntent.replace(/_/g, " ")} has been detected. `;
   let why_now = "This opportunity surfaced based on recent store activity. ";

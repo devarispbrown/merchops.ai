@@ -5,7 +5,7 @@
  * Routes to appropriate resolver based on execution type
  */
 
-import { ExecutionType, OperatorIntent } from '@prisma/client';
+import { ExecutionType, OperatorIntent as _OperatorIntent } from '@prisma/client';
 import { prisma } from '@/server/db/client';
 import {
   OutcomeComputationInput,

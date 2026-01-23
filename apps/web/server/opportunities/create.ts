@@ -30,7 +30,7 @@ export async function createOpportunityFromEvents(
     workspace_id,
     type,
     event_ids,
-    operator_intent,
+    operator_intent: _operator_intent,
     why_now,
     rationale,
     impact_range,
@@ -124,7 +124,7 @@ export async function generateOpportunityExplanations(
     // TODO: Implement AI generation with versioned prompts
     // For now, use fallback templates
     return generateFallbackExplanations(input);
-  } catch (error) {
+  } catch {
     // Always fall back to deterministic templates
     return generateFallbackExplanations(input);
   }
@@ -258,7 +258,7 @@ function generateHighVelocityProtectionExplanation(
 }
 
 function generateGenericExplanation(
-  input: OpportunityAiInput
+  _input: OpportunityAiInput
 ): OpportunityAiOutput {
   return {
     why_now: 'Store conditions have changed requiring attention.',

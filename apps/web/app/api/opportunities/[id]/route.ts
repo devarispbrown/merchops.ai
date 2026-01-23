@@ -26,14 +26,14 @@ const updateOpportunitySchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: opportunityId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const opportunityId = params.id;
 
     try {
       // Check authentication
@@ -200,14 +200,14 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: opportunityId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const opportunityId = params.id;
 
     try {
       // Check authentication

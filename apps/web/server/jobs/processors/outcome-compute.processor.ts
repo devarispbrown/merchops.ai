@@ -308,7 +308,7 @@ async function getActionDraft(
 async function computeDiscountOutcome(
   workspaceId: string,
   execution: any,
-  actionDraft: any
+  _actionDraft: any
 ): Promise<OutcomeData> {
   const { id, finishedAt } = execution;
   const computedAt = new Date();
@@ -363,7 +363,7 @@ async function computeDiscountOutcome(
 async function computeEmailOutcome(
   workspaceId: string,
   execution: any,
-  actionDraft: any
+  _actionDraft: any
 ): Promise<OutcomeData> {
   const { id } = execution;
   const computedAt = new Date();
@@ -405,7 +405,7 @@ async function computeEmailOutcome(
 async function computeProductPauseOutcome(
   workspaceId: string,
   execution: any,
-  actionDraft: any
+  _actionDraft: any
 ): Promise<OutcomeData> {
   const { id } = execution;
   const computedAt = new Date();

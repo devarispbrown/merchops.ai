@@ -73,7 +73,7 @@ export function verifyShopifyWebhook(
     // This prevents timing attacks where an attacker could measure
     // the time it takes to compare strings and infer the correct value
     return crypto.timingSafeEqual(computedBuffer, signatureBuffer);
-  } catch (error) {
+  } catch {
     // timingSafeEqual throws if buffer lengths don't match
     // or if any other error occurs - treat all errors as invalid
     return false;
@@ -250,7 +250,7 @@ export function verifyWebhookTimestamp(
     }
 
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

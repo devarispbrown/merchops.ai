@@ -113,7 +113,7 @@ function getConfidenceColor(confidence: number): string {
   return 'text-muted-foreground';
 }
 
-function getTrendIcon(trend: 'improving' | 'stable' | 'declining'): JSX.Element {
+function getTrendIcon(trend: 'improving' | 'stable' | 'declining'): React.ReactNode {
   switch (trend) {
     case 'improving':
       return (

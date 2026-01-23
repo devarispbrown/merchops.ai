@@ -19,14 +19,14 @@ const ApproveDraftSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: draftId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const draftId = params.id;
 
     try {
       // Check authentication

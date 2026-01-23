@@ -18,7 +18,18 @@ import { performInitialSync, getSyncStatus } from '../sync';
 process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY = '0'.repeat(64);
 
 // Mock the Shopify client and OAuth
-vi.mock('../client');
+const mockClientInstance = {
+  getProducts: vi.fn(),
+  getOrders: vi.fn(),
+  getCustomers: vi.fn(),
+  getInventoryLevels: vi.fn(),
+};
+
+vi.mock('../client', () => ({
+  ShopifyClient: vi.fn(function () {
+    return mockClientInstance;
+  }),
+}));
 vi.mock('../oauth', () => ({
   decryptToken: vi.fn((token) => token),
   encryptToken: vi.fn((token) => token),
@@ -44,6 +55,11 @@ describe('Shopify Sync', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset mock implementations to clear any queued mockResolvedValueOnce values
+    mockClientInstance.getProducts.mockReset();
+    mockClientInstance.getOrders.mockReset();
+    mockClientInstance.getCustomers.mockReset();
+    mockClientInstance.getInventoryLevels.mockReset();
   });
 
   afterEach(() => {
@@ -70,16 +86,12 @@ describe('Shopify Sync', () => {
       ];
 
       // Mock ShopifyClient methods
-      const mockClient = {
-        getProducts: vi.fn()
-          .mockResolvedValueOnce(mockProducts)
-          .mockResolvedValueOnce([]), // Empty array to stop pagination
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
-
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
+      mockClientInstance.getProducts
+        .mockResolvedValueOnce(mockProducts)
+        .mockResolvedValueOnce([]); // Empty array to stop pagination
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
       // Mock Prisma responses
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
@@ -102,7 +114,7 @@ describe('Shopify Sync', () => {
 
       expect(result.products).toBe(2);
       expect(result.status).toBe('completed');
-      expect(mockClient.getProducts).toHaveBeenCalled();
+      expect(mockClientInstance.getProducts).toHaveBeenCalled();
     });
 
     test('syncs orders successfully', async () => {
@@ -117,16 +129,13 @@ describe('Shopify Sync', () => {
         },
       ];
 
-      const mockClient = {
-        getProducts: vi.fn().mockResolvedValue([]),
-        getOrders: vi.fn()
-          .mockResolvedValueOnce(mockOrders)
-          .mockResolvedValueOnce([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
+      mockClientInstance.getProducts.mockResolvedValue([]);
+      mockClientInstance.getOrders
+        .mockResolvedValueOnce(mockOrders)
+        .mockResolvedValueOnce([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',
@@ -161,16 +170,13 @@ describe('Shopify Sync', () => {
         },
       ];
 
-      const mockClient = {
-        getProducts: vi.fn().mockResolvedValue([]),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn()
-          .mockResolvedValueOnce(mockCustomers)
-          .mockResolvedValueOnce([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
+      mockClientInstance.getProducts.mockResolvedValue([]);
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers
+        .mockResolvedValueOnce(mockCustomers)
+        .mockResolvedValueOnce([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',
@@ -203,14 +209,11 @@ describe('Shopify Sync', () => {
         },
       ];
 
-      const mockClient = {
-        getProducts: vi.fn().mockResolvedValue([]),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue(mockInventoryLevels),
-      };
+      mockClientInstance.getProducts.mockResolvedValue([]);
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue(mockInventoryLevels);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',
@@ -242,16 +245,12 @@ describe('Shopify Sync', () => {
         handle: 'product-1',
       };
 
-      const mockClient = {
-        getProducts: vi.fn()
-          .mockResolvedValueOnce([mockProduct])
-          .mockResolvedValueOnce([]),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
-
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
+      mockClientInstance.getProducts
+        .mockResolvedValueOnce([mockProduct])
+        .mockResolvedValueOnce([]);
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
       // Mock existing record with same data (idempotent case)
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue({
@@ -297,16 +296,12 @@ describe('Shopify Sync', () => {
         handle: 'product-1',
       };
 
-      const mockClient = {
-        getProducts: vi.fn()
-          .mockResolvedValueOnce([updatedProduct])
-          .mockResolvedValueOnce([]),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
-
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
+      mockClientInstance.getProducts
+        .mockResolvedValueOnce([updatedProduct])
+        .mockResolvedValueOnce([]);
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
       // Mock existing record with old data
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue({
@@ -366,16 +361,13 @@ describe('Shopify Sync', () => {
         handle: `product-${i + 51}`,
       }));
 
-      const mockClient = {
-        getProducts: vi.fn()
-          .mockResolvedValueOnce(batch1) // First batch (50 items)
-          .mockResolvedValueOnce(batch2), // Second batch (30 items, less than batchSize so stops)
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
+      mockClientInstance.getProducts
+        .mockResolvedValueOnce(batch1) // First batch (50 items)
+        .mockResolvedValueOnce(batch2); // Second batch (30 items, less than batchSize so stops)
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',
@@ -396,7 +388,7 @@ describe('Shopify Sync', () => {
 
       expect(result.products).toBe(80); // 50 + 30
       // Should call twice: once for batch1, once for batch2 (which is < batchSize so stops)
-      expect(mockClient.getProducts).toHaveBeenCalledTimes(2);
+      expect(mockClientInstance.getProducts).toHaveBeenCalledTimes(2);
     });
 
     test('respects sync limits', async () => {
@@ -417,16 +409,13 @@ describe('Shopify Sync', () => {
         handle: `product-${i + 51}`,
       }));
 
-      const mockClient = {
-        getProducts: vi.fn()
-          .mockResolvedValueOnce(batch1)  // Will stop after processing only 10 due to limit
-          .mockResolvedValueOnce(batch2), // Should not be called
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
+      mockClientInstance.getProducts
+        .mockResolvedValueOnce(batch1)  // Will stop after processing only 10 due to limit
+        .mockResolvedValueOnce(batch2); // Should not be called
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',
@@ -453,14 +442,11 @@ describe('Shopify Sync', () => {
     });
 
     test('handles sync errors and updates status', async () => {
-      const mockClient = {
-        getProducts: vi.fn().mockRejectedValue(new Error('API error')),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue([]),
-      };
+      mockClientInstance.getProducts.mockRejectedValue(new Error('API error'));
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue([]);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyConnection.updateMany).mockResolvedValue({ count: 1 });
 
       await expect(
@@ -504,14 +490,11 @@ describe('Shopify Sync', () => {
         },
       ];
 
-      const mockClient = {
-        getProducts: vi.fn().mockResolvedValue([]),
-        getOrders: vi.fn().mockResolvedValue([]),
-        getCustomers: vi.fn().mockResolvedValue([]),
-        getInventoryLevels: vi.fn().mockResolvedValue(mockInventoryLevels),
-      };
+      mockClientInstance.getProducts.mockResolvedValue([]);
+      mockClientInstance.getOrders.mockResolvedValue([]);
+      mockClientInstance.getCustomers.mockResolvedValue([]);
+      mockClientInstance.getInventoryLevels.mockResolvedValue(mockInventoryLevels);
 
-      vi.mocked(ShopifyClient).mockImplementation(() => mockClient as any);
       vi.mocked(prisma.shopifyObjectCache.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.shopifyObjectCache.upsert).mockResolvedValue({
         id: 'cache-id',

@@ -5,8 +5,8 @@
  * and relationship loading.
  */
 
-import { PrismaClient, Opportunity, Event, OpportunityState, PriorityBucket } from '@prisma/client';
-import { OpportunityFilters, OpportunityListQuery, OpportunityWithEvents } from './types';
+import { PrismaClient, Opportunity, type Event as _Event, OpportunityState, PriorityBucket } from '@prisma/client';
+import { type OpportunityFilters, OpportunityListQuery, OpportunityWithEvents } from './types';
 
 // ============================================================================
 // SINGLE OPPORTUNITY QUERIES

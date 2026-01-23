@@ -16,13 +16,7 @@
  * proper tenant isolation. Never bypass workspace scoping.
  */
 
-import { Prisma, PrismaClient } from '@prisma/client';
-
-/**
- * Type for workspace-scoped Prisma client
- * Uses ReturnType to infer the extended client type
- */
-type WorkspaceScopedPrismaClient = ReturnType<typeof getWorkspaceScopedClient>;
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Workspace context for request lifecycle
@@ -199,7 +193,7 @@ export function withWorkspaceScope<TResponse = Response>(
     }
   ) => Promise<TResponse>
 ) {
-  return async (request: Request, routeContext?: unknown): Promise<TResponse> => {
+  return async (request: Request, _routeContext?: unknown): Promise<TResponse> => {
     // Extract workspace context from session
     const { getServerSession } = await import('@/server/auth/session');
     const session = await getServerSession();

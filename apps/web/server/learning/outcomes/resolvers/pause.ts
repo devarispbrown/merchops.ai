@@ -70,7 +70,7 @@ export class PauseProductOutcomeResolver {
 
     // For pause action, reduction in stockouts is good (negative delta)
     // For unpause, we expect stockouts to return (positive delta is neutral/expected)
-    const primaryDeltaPct = action === 'pause' ? -stockoutDeltaPct : stockoutDeltaPct;
+    const _primaryDeltaPct = action === 'pause' ? -stockoutDeltaPct : stockoutDeltaPct;
 
     // Determine outcome
     let outcome: OutcomeType;

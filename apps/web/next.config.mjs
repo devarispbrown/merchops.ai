@@ -5,11 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@merchops/shared'],
   output: 'standalone',
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
-  },
+  // Server Actions body size limit (serverActions is now stable in Next.js 15+)
   images: {
     remotePatterns: [
       {

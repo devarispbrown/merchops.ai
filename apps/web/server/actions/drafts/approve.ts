@@ -28,7 +28,7 @@ interface ApproveDraftResult {
 // ============================================================================
 
 export async function approveDraft(input: ApproveDraftInput): Promise<ApproveDraftResult> {
-  const { workspaceId, draftId, approvedBy } = input;
+  const { workspaceId, draftId, approvedBy: _approvedBy } = input;
 
   // Fetch draft with validation
   const draft = await prisma.actionDraft.findFirst({
@@ -189,7 +189,7 @@ export async function rejectDraft(params: {
   draftId: string;
   reason?: string;
 }): Promise<void> {
-  const { workspaceId, draftId, reason } = params;
+  const { workspaceId, draftId, reason: _reason } = params;
 
   const draft = await prisma.actionDraft.findFirst({
     where: {

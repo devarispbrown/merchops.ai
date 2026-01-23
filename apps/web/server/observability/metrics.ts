@@ -10,7 +10,7 @@ import { logger } from './logger';
 /**
  * Metric types
  */
-type MetricType = 'counter' | 'gauge' | 'histogram' | 'summary';
+type _MetricType = 'counter' | 'gauge' | 'histogram' | 'summary';
 
 /**
  * Metric value

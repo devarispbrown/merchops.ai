@@ -65,7 +65,7 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
-    const startTime = Date.now();
+    const _startTime = Date.now();
 
     try {
       const response = await fetch(`${this.baseUrl}/api/chat`, {

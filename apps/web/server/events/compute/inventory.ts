@@ -26,7 +26,7 @@ const INVENTORY_CHECK_WINDOW_DAYS = 7; // Look back window for inventory changes
 // INVENTORY THRESHOLD EVENTS
 // ============================================================================
 
-interface InventorySnapshot {
+interface _InventorySnapshot {
   product_id: string;
   variant_id: string;
   product_title: string;
@@ -328,8 +328,8 @@ async function getPreviousInventory(
  * Calculates how many days a product has been in stock
  */
 async function calculateDaysInStock(
-  workspace_id: string,
-  variant_id: string
+  _workspace_id: string,
+  _variant_id: string
 ): Promise<number> {
   // Simplified calculation - would need full inventory history
   // For MVP, default to 30 days
@@ -341,7 +341,7 @@ async function calculateDaysInStock(
  */
 async function checkPreviousOutOfStock(
   workspace_id: string,
-  inventory_item_id: string
+  _inventory_item_id: string
 ): Promise<boolean> {
   // Check recent out of stock events for this product
   const recentEvent = await prisma.event.findFirst({
@@ -365,7 +365,7 @@ async function checkPreviousOutOfStock(
  */
 async function calculateOutOfStockDuration(
   workspace_id: string,
-  inventory_item_id: string
+  _inventory_item_id: string
 ): Promise<number> {
   const outOfStockEvent = await prisma.event.findFirst({
     where: {

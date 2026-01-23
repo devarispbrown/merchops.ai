@@ -16,13 +16,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { ExecutionErrorCode } from '@/server/actions/types';
 
-// Mock Resend module
+// Create shared mock instance that can be reconfigured per test
+const mockSend = vi.fn();
+const mockResendInstance = {
+  emails: {
+    send: mockSend,
+  },
+};
+
+// Mock Resend module with configurable mock
 vi.mock('resend', () => ({
-  Resend: vi.fn().mockImplementation(() => ({
-    emails: {
-      send: vi.fn(),
-    },
-  })),
+  Resend: vi.fn(function () {
+    return mockResendInstance;
+  }),
 }));
 
 // Mock database
@@ -35,6 +41,13 @@ vi.mock('@/server/db', () => ({
 describe('Email Execution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules(); // Required for Vitest 4.x with dynamic imports
+    // Reset mock send to default success response
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({
+      data: { id: 'msg-123' },
+      error: null,
+    });
     // Reset environment variables
     delete process.env.RESEND_API_KEY;
     delete process.env.EMAIL_SANDBOX_MODE;
@@ -74,18 +87,7 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-api-key';
 
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
-        data: { id: 'msg-123' },
-        error: null,
-      });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
-
+      // mockSend is already configured in beforeEach with default success response
       const { executeEmail } = await import('@/server/actions/execute/email');
 
       const payload = {
@@ -190,15 +192,9 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
       const networkError = new Error('Network error');
       (networkError as any).code = 'ECONNREFUSED';
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(networkError),
-        },
-      }));
+      mockSend.mockRejectedValue(networkError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -228,17 +224,11 @@ describe('Email Execution', () => {
 
       // This test verifies error classification logic
       // In reality, getRecipients returns mock data, so we test classification directly
-      const resend = await import('resend');
-
       // Force an error that will trigger the classification
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockImplementation(() => {
-            const error = new Error('No recipients found for segment');
-            throw error;
-          }),
-        },
-      }));
+      mockSend.mockImplementation(() => {
+        const error = new Error('No recipients found for segment');
+        throw error;
+      });
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -268,15 +258,9 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
       const rateLimitError = new Error('Rate limit exceeded');
       (rateLimitError as any).statusCode = 429;
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(rateLimitError),
-        },
-      }));
+      mockSend.mockRejectedValue(rateLimitError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -335,17 +319,10 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -384,17 +361,10 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-abc-123' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -423,9 +393,8 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
       let callCount = 0;
-      const mockSend = vi.fn().mockImplementation(() => {
+      mockSend.mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({ data: { id: 'msg-1' }, error: null });
@@ -433,12 +402,6 @@ describe('Email Execution', () => {
           return Promise.resolve({ data: null, error: { message: 'Invalid email address' } });
         }
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -469,17 +432,10 @@ describe('Email Execution', () => {
       process.env.EMAIL_PROVIDER = 'resend';
       process.env.RESEND_API_KEY = 'test-key';
 
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 

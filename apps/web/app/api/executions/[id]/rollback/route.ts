@@ -18,10 +18,10 @@ const RollbackSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const executionId = params.id;
+    const { id: executionId } = await params;
     const workspaceId = request.headers.get("x-workspace-id");
 
     if (!workspaceId) {

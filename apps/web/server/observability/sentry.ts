@@ -52,7 +52,7 @@ export function initializeSentry(): void {
       ],
 
       // Before send hook - inject correlation context and filter PII
-      beforeSend(event, hint) {
+      beforeSend(event, _hint) {
         // Inject correlation context
         const context = getCorrelationContext();
         if (context) {

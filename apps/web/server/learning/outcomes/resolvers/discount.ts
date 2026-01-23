@@ -31,7 +31,7 @@ export class DiscountOutcomeResolver {
     const { workspace_id, execution_payload, executed_at } = input;
 
     // Extract discount details from payload
-    const discountCode = execution_payload.discount_code as string;
+    const _discountCode = execution_payload.discount_code as string;
     const targetProducts = execution_payload.target_products as string[] | undefined;
 
     // Define baseline window (before execution)

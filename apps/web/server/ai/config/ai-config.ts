@@ -53,7 +53,7 @@ async function loadFromDatabase(
       // Custom settings can contain additional overrides
       ...(settings.custom_settings as Record<string, unknown> || {}),
     };
-  } catch (error) {
+  } catch {
     // Table might not exist yet, that's OK
     return null;
   }

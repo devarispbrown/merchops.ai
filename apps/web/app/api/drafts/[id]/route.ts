@@ -17,14 +17,14 @@ import { logger } from "@/server/observability/logger";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: draftId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const draftId = params.id;
 
     try {
       // Check authentication
@@ -148,14 +148,14 @@ const UpdateDraftSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: draftId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const draftId = params.id;
 
     try {
       // Check authentication

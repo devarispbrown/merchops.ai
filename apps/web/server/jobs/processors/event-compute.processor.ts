@@ -276,8 +276,8 @@ async function computeAllEvents(
  * Check if product is out of stock
  */
 async function checkProductOutOfStock(
-  workspaceId: string,
-  productId: string
+  _workspaceId: string,
+  _productId: string
 ): Promise<EventPayload | null> {
   // TODO: Implement actual logic
   // 1. Get product from DB
@@ -291,8 +291,8 @@ async function checkProductOutOfStock(
  * Check if product is back in stock
  */
 async function checkProductBackInStock(
-  workspaceId: string,
-  productId: string
+  _workspaceId: string,
+  _productId: string
 ): Promise<EventPayload | null> {
   // TODO: Implement actual logic
   return null;
@@ -302,8 +302,8 @@ async function checkProductBackInStock(
  * Check if inventory crossed threshold
  */
 async function checkInventoryThreshold(
-  workspaceId: string,
-  productId: string
+  _workspaceId: string,
+  _productId: string
 ): Promise<EventPayload | null> {
   // TODO: Implement actual logic
   // Default threshold: 10 units
@@ -314,7 +314,7 @@ async function checkInventoryThreshold(
  * Check for customer inactivity
  */
 async function checkCustomerInactivity(
-  workspaceId: string
+  _workspaceId: string
 ): Promise<EventPayload[]> {
   const events: EventPayload[] = [];
 
@@ -330,7 +330,7 @@ async function checkCustomerInactivity(
  * Check for velocity spikes
  */
 async function checkVelocitySpikes(
-  workspaceId: string
+  _workspaceId: string
 ): Promise<EventPayload[]> {
   const events: EventPayload[] = [];
 
@@ -346,7 +346,7 @@ async function checkVelocitySpikes(
  * Compute all inventory-related events
  */
 async function computeInventoryEvents(
-  workspaceId: string
+  _workspaceId: string
 ): Promise<EventPayload[]> {
   const events: EventPayload[] = [];
 

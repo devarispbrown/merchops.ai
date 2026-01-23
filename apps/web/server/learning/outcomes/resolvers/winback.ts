@@ -181,10 +181,10 @@ export class WinbackOutcomeResolver {
    * In production, this would integrate with email provider API (Postmark, SendGrid)
    */
   private async fetchEmailMetrics(
-    workspace_id: string,
-    campaign_id: string | undefined,
-    start: Date,
-    end: Date
+    _workspace_id: string,
+    _campaign_id: string | undefined,
+    _start: Date,
+    _end: Date
   ): Promise<{
     open_rate: number;
     click_rate: number;

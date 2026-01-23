@@ -10,7 +10,7 @@
 import { Queue } from 'bullmq';
 import {
   shopifySyncQueue,
-  eventComputeQueue,
+  eventComputeQueue as _eventComputeQueue,
   opportunityGenerateQueue,
   outcomeComputeQueue,
 } from './queues';

@@ -227,7 +227,7 @@ async function generatePauseProductPayload(params: {
   context: Record<string, any>;
   workspaceId: string;
 }): Promise<PauseProductPayload> {
-  const { opportunity, context } = params;
+  const { opportunity, context: _context } = params;
 
   // Extract product IDs from opportunity events
   const productIds = extractProductIdsFromEvents(opportunity.event_links);
@@ -251,7 +251,7 @@ async function generatePauseProductPayload(params: {
 // AI GENERATION (WITH FALLBACKS)
 // ============================================================================
 
-async function generateDiscountTitle(params: {
+async function generateDiscountTitle(_params: {
   operatorIntent: OperatorIntent;
   opportunity: any;
   context: Record<string, any>;
@@ -262,7 +262,7 @@ async function generateDiscountTitle(params: {
   throw new Error("AI not yet implemented");
 }
 
-async function generateEmailCopy(params: {
+async function generateEmailCopy(_params: {
   operatorIntent: OperatorIntent;
   opportunity: any;
   context: Record<string, any>;
@@ -288,7 +288,7 @@ function generateFallbackDiscountTitle(opportunityType: string): string {
   return templates[opportunityType] || templates.default;
 }
 
-function generateFallbackEmailCopy(opportunityType: string): {
+function generateFallbackEmailCopy(_opportunityType: string): {
   subject: string;
   body_html: string;
   body_text: string;
@@ -347,7 +347,7 @@ function extractProductIdsFromEvents(eventLinks: any[]): string[] {
 function calculateDiscountValue(context: Record<string, any>): number {
   // Smart discount calculation based on inventory risk
   const inventoryLevel = context.inventoryLevel || 0;
-  const velocityScore = context.velocityScore || 0;
+  const _velocityScore = context.velocityScore || 0;
 
   if (inventoryLevel > 100) return 15; // 15% for high inventory
   if (inventoryLevel > 50) return 20; // 20% for medium inventory

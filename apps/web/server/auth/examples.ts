@@ -275,7 +275,7 @@ export function createAuthMiddleware() {
     try {
       const workspaceId = await ensureWorkspaceAccess();
       return await handler(workspaceId);
-    } catch (error) {
+    } catch {
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }

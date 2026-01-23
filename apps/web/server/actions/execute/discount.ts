@@ -91,7 +91,7 @@ async function getShopifyClient(workspaceId: string): Promise<any> {
   };
 }
 
-async function createPriceRule(client: any, payload: DiscountDraftPayload): Promise<any> {
+async function createPriceRule(_client: any, payload: DiscountDraftPayload): Promise<any> {
   // Map our payload to Shopify's price rule format
   const priceRuleData = {
     title: payload.title,
@@ -128,7 +128,7 @@ async function createPriceRule(client: any, payload: DiscountDraftPayload): Prom
 }
 
 async function createDiscountCode(
-  client: any,
+  _client: any,
   priceRuleId: string,
   payload: DiscountDraftPayload
 ): Promise<any> {
@@ -167,7 +167,7 @@ export async function rollbackDiscount(params: {
   const { workspaceId, providerResponse } = params;
 
   try {
-    const shopifyClient = await getShopifyClient(workspaceId);
+    const _shopifyClient = await getShopifyClient(workspaceId);
     const priceRuleId = providerResponse.priceRule?.id;
 
     if (!priceRuleId) {

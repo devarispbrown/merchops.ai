@@ -16,7 +16,7 @@ import {
   logJobFailed,
   logExecution,
 } from '../../observability/logger';
-import { ExecutionType, ExecutionStatus, isRetryableError } from '../../actions/types';
+import { ExecutionType, ExecutionStatus, isRetryableError as _isRetryableError } from '../../actions/types';
 import { executeDiscount } from '../../actions/execute/discount';
 import { executePauseProduct } from '../../actions/execute/pause-product';
 import { executeEmail } from '../../actions/execute/email';
@@ -212,7 +212,7 @@ async function processExecution(
       };
     }
   } catch (error: any) {
-    const duration_ms = Date.now() - startTime;
+    const _duration_ms = Date.now() - startTime;
 
     // Update execution status
     await prisma.execution.update({

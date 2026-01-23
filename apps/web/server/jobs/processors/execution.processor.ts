@@ -10,7 +10,7 @@
 import { Job } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { logger } from '../../observability/logger';
-import { captureException, captureExecutionError } from '../../observability/sentry';
+import { captureException as _captureException, captureExecutionError } from '../../observability/sentry';
 import {
   incrementJobsProcessed,
   incrementExecutionsTotal,
@@ -301,8 +301,8 @@ async function executeDiscount(
       durationMs,
     };
   } catch (error) {
-    const finishedAt = new Date();
-    const durationMs = finishedAt.getTime() - startedAt.getTime();
+    const _finishedAt = new Date();
+    const _durationMs = _finishedAt.getTime() - startedAt.getTime();
 
     throw error;
   }
@@ -351,8 +351,8 @@ async function executeEmail(
       durationMs,
     };
   } catch (error) {
-    const finishedAt = new Date();
-    const durationMs = finishedAt.getTime() - startedAt.getTime();
+    const _finishedAt = new Date();
+    const _durationMs = _finishedAt.getTime() - startedAt.getTime();
 
     throw error;
   }
@@ -402,8 +402,8 @@ async function executeProductPause(
       durationMs,
     };
   } catch (error) {
-    const finishedAt = new Date();
-    const durationMs = finishedAt.getTime() - startedAt.getTime();
+    const _finishedAt = new Date();
+    const _durationMs = _finishedAt.getTime() - startedAt.getTime();
 
     throw error;
   }

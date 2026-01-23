@@ -76,7 +76,7 @@ interface OutcomeBadgeProps {
 export function OutcomeBadge({ outcome }: OutcomeBadgeProps) {
   const config: Record<
     OutcomeType,
-    { variant: 'success' | 'error' | 'secondary'; label: string; icon: JSX.Element }
+    { variant: 'success' | 'error' | 'secondary'; label: string; icon: React.ReactNode }
   > = {
     [OutcomeType.HELPED]: {
       variant: 'success',

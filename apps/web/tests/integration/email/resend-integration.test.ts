@@ -15,14 +15,30 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { ExecutionErrorCode } from '@/server/actions/types';
 
-// Mock Resend
+// Shared mock instances at the top level
+const mockSend = vi.fn();
+const mockResendInstance = {
+  emails: {
+    send: mockSend,
+  },
+};
+
+// Mock Resend with shared instance
 vi.mock('resend', () => ({
-  Resend: vi.fn(),
+  Resend: vi.fn(function () {
+    return mockResendInstance;
+  }),
 }));
 
 describe('Resend Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({
+      data: { id: 'msg-123' },
+      error: null,
+    });
     process.env.EMAIL_SANDBOX_MODE = 'false';
     process.env.EMAIL_PROVIDER = 'resend';
     process.env.RESEND_API_KEY = 'test-api-key';
@@ -31,17 +47,10 @@ describe('Resend Integration', () => {
 
   describe('Successful Email Send', () => {
     it('should send email and store provider response', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'abc-123-def-456' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -75,17 +84,10 @@ describe('Resend Integration', () => {
     });
 
     it('should include tags for tracking', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -113,17 +115,10 @@ describe('Resend Integration', () => {
     });
 
     it('should include reply-to address', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -148,15 +143,9 @@ describe('Resend Integration', () => {
 
   describe('Error Scenarios', () => {
     it('should handle Resend API authentication error', async () => {
-      const resend = await import('resend');
       const authError = new Error('Invalid API token');
       (authError as any).statusCode = 401;
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(authError),
-        },
-      }));
+      mockSend.mockRejectedValue(authError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -180,15 +169,9 @@ describe('Resend Integration', () => {
     });
 
     it('should handle invalid email address error', async () => {
-      const resend = await import('resend');
       const invalidEmailError = new Error('Invalid recipient email');
       (invalidEmailError as any).statusCode = 422;
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(invalidEmailError),
-        },
-      }));
+      mockSend.mockRejectedValue(invalidEmailError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -212,15 +195,9 @@ describe('Resend Integration', () => {
     });
 
     it('should handle service unavailable error as retryable', async () => {
-      const resend = await import('resend');
       const serviceError = new Error('Service temporarily unavailable');
       (serviceError as any).statusCode = 503;
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(serviceError),
-        },
-      }));
+      mockSend.mockRejectedValue(serviceError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -244,15 +221,9 @@ describe('Resend Integration', () => {
     });
 
     it('should handle timeout error as retryable', async () => {
-      const resend = await import('resend');
       const timeoutError = new Error('Connection timeout');
       (timeoutError as any).code = 'ETIMEDOUT';
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: vi.fn().mockRejectedValue(timeoutError),
-        },
-      }));
+      mockSend.mockRejectedValue(timeoutError);
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -278,17 +249,12 @@ describe('Resend Integration', () => {
 
   describe('Parallel Email Handling', () => {
     it('should send to multiple recipients in parallel', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
-        data: { id: 'msg-' + Math.random() },
-        error: null,
-      });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
+      mockSend.mockImplementation(() =>
+        Promise.resolve({
+          data: { id: 'msg-' + Math.random() },
+          error: null,
+        })
+      );
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -313,9 +279,8 @@ describe('Resend Integration', () => {
     });
 
     it('should handle mixed success and failure results', async () => {
-      const resend = await import('resend');
       let callCount = 0;
-      const mockSend = vi.fn().mockImplementation(() => {
+      mockSend.mockImplementation(() => {
         callCount++;
         if (callCount === 2) {
           return Promise.resolve({
@@ -328,12 +293,6 @@ describe('Resend Integration', () => {
           error: null,
         });
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -360,17 +319,10 @@ describe('Resend Integration', () => {
 
   describe('Unsubscribe Link', () => {
     it('should append unsubscribe link to HTML body', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -397,17 +349,10 @@ describe('Resend Integration', () => {
     });
 
     it('should insert unsubscribe before closing body tag if present', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 
@@ -440,17 +385,10 @@ describe('Resend Integration', () => {
 
   describe('Tag Storage', () => {
     it('should store workspace and customer tags', async () => {
-      const resend = await import('resend');
-      const mockSend = vi.fn().mockResolvedValue({
+      mockSend.mockResolvedValue({
         data: { id: 'msg-1' },
         error: null,
       });
-
-      (resend.Resend as any).mockImplementation(() => ({
-        emails: {
-          send: mockSend,
-        },
-      }));
 
       const { executeEmail } = await import('@/server/actions/execute/email');
 

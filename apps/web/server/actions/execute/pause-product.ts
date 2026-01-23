@@ -82,7 +82,7 @@ async function getShopifyClient(workspaceId: string): Promise<any> {
   };
 }
 
-async function getProductStates(client: any, productIds: string[]): Promise<any[]> {
+async function getProductStates(_client: any, productIds: string[]): Promise<any[]> {
   const states = [];
 
   for (const productId of productIds) {
@@ -102,12 +102,12 @@ async function getProductStates(client: any, productIds: string[]): Promise<any[
   return states;
 }
 
-async function pauseProducts(client: any, payload: PauseProductPayload): Promise<any[]> {
+async function pauseProducts(_client: any, payload: PauseProductPayload): Promise<any[]> {
   const pausedProducts = [];
 
   for (const productId of payload.product_ids) {
     // Update product status to 'draft' (effectively pausing it)
-    const updateData = {
+    const _updateData = {
       id: productId,
       status: "draft",
       published_at: null, // Unpublish
@@ -144,7 +144,7 @@ export async function rollbackPauseProduct(params: {
   const { workspaceId, providerResponse } = params;
 
   try {
-    const shopifyClient = await getShopifyClient(workspaceId);
+    const _shopifyClient = await getShopifyClient(workspaceId);
     const originalStates = providerResponse.originalStates || [];
 
     if (originalStates.length === 0) {

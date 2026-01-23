@@ -22,7 +22,7 @@ import {
   DECAY_CONFIGS,
 } from '../../opportunities/types';
 import { generateOpportunityContent } from '../../ai/generate';
-import { getOpportunityFallback } from '../../ai/fallbacks';
+import { getOpportunityFallback as _getOpportunityFallback } from '../../ai/fallbacks';
 
 // ============================================================================
 // TYPES
@@ -356,7 +356,7 @@ async function generateOpportunity(
 async function findSimilarOpportunity(
   workspace_id: string,
   opportunityType: OpportunityType,
-  events: any[]
+  _events: any[]
 ): Promise<any> {
   // Check for recent opportunities of the same type that are not terminal states
   const recentOpportunity = await prisma.opportunity.findFirst({

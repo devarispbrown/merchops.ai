@@ -14,14 +14,14 @@ import { logger } from "@/server/observability/logger";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId =
     extractCorrelationIdFromHeaders(request.headers) ?? generateCorrelationId();
+  const { id: executionId } = await params;
 
   return runWithCorrelationAsync({ correlationId }, async () => {
     const startTime = Date.now();
-    const executionId = params.id;
 
     try {
       // Check authentication

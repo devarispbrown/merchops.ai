@@ -106,12 +106,13 @@ async function getQueueDetail(queue: Queue): Promise<QueueDetail> {
  */
 async function getQueueHandler(
   request: NextRequest,
-  context?: { params?: Record<string, string> }
+  context?: { params?: Promise<Record<string, string>> }
 ) {
   // Require authentication
   await requireAuth();
 
-  const queueName = context?.params?.queue;
+  const params = await context?.params;
+  const queueName = params?.queue;
   if (!queueName) {
     throw new ValidationError('Queue name is required');
   }
@@ -129,12 +130,13 @@ async function getQueueHandler(
  */
 async function retryJobsHandler(
   request: NextRequest,
-  context?: { params?: Record<string, string> }
+  context?: { params?: Promise<Record<string, string>> }
 ) {
   // Require authentication
   await requireAuth();
 
-  const queueName = context?.params?.queue;
+  const params = await context?.params;
+  const queueName = params?.queue;
   if (!queueName) {
     throw new ValidationError('Queue name is required');
   }

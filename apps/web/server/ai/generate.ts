@@ -25,7 +25,7 @@ import {
   withRetry,
   withFallback,
 } from "./providers";
-import { loadAIConfig, getAIConfigSync, isProviderConfigured } from "./config";
+import { getAIConfigSync, isProviderConfigured } from "./config";
 
 // Cache for provider instances
 let cachedConfig: ProviderConfig | null = null;
@@ -168,7 +168,7 @@ async function callLLMWithFallback<TInput extends PromptInput, TOutput extends P
 export async function generateAI<TInput extends PromptInput, TOutput extends PromptOutput>(
   prompt: PromptTemplate<TInput, TOutput>,
   input: TInput,
-  prisma: PrismaClient
+  _prisma: PrismaClient
 ): Promise<AIGenerationResult<TOutput>> {
   const startTime = Date.now();
   const config = getConfig();
@@ -177,7 +177,7 @@ export async function generateAI<TInput extends PromptInput, TOutput extends Pro
     if (!isAIEnabled()) {
       // Use fallback when AI is not enabled
       console.info(`AI not enabled (no provider configured), using fallback for ${prompt.version}`);
-      return useFallback(prompt, input, startTime);
+      return applyFallback(prompt, input, startTime);
     }
 
     // Call LLM provider with retry and optional fallback
@@ -205,14 +205,14 @@ export async function generateAI<TInput extends PromptInput, TOutput extends Pro
       throw error;
     }
 
-    return useFallback(prompt, input, startTime);
+    return applyFallback(prompt, input, startTime);
   }
 }
 
 /**
  * Use deterministic fallback template
  */
-function useFallback<TInput extends PromptInput, TOutput extends PromptOutput>(
+function applyFallback<TInput extends PromptInput, TOutput extends PromptOutput>(
   prompt: PromptTemplate<TInput, TOutput>,
   input: TInput,
   startTime: number

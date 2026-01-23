@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient, Opportunity } from '@prisma/client';
-import { transitionState, markAsDismissed } from './state-machine';
+import { markAsDismissed } from './state-machine';
 import { getDismissedOpportunityKeys } from './queries';
 
 // ============================================================================

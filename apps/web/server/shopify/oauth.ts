@@ -131,7 +131,7 @@ export function verifyHmac(query: Record<string, string>): boolean {
   try {
     // Use timing-safe comparison
     return crypto.timingSafeEqual(hmacBuffer, generatedBuffer);
-  } catch (error) {
+  } catch {
     // timingSafeEqual throws if buffers have different lengths
     // This should not happen due to length check above, but handle defensively
     return false;

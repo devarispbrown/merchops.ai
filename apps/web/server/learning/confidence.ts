@@ -7,7 +7,7 @@
 
 import { OperatorIntent, OutcomeType as PrismaOutcomeType } from '@prisma/client';
 import { prisma } from '@/server/db/client';
-import { ConfidenceScore, OutcomeType, fromPrismaOutcomeType } from './types';
+import { ConfidenceScore, OutcomeType as _OutcomeType, fromPrismaOutcomeType as _fromPrismaOutcomeType } from './types';
 
 /**
  * Calculate confidence score for an operator intent
@@ -244,7 +244,7 @@ export async function updateConfidenceScores(
   // Note: This assumes there's a confidence_scores_json field or similar
   // Adjust based on your actual schema
   try {
-    const scoresData = scores.reduce((acc, score) => {
+    const _scoresData = scores.reduce((acc, score) => {
       acc[score.operator_intent] = {
         score: score.score,
         trend: score.trend,
