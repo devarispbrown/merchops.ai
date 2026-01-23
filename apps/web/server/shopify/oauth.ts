@@ -9,14 +9,27 @@ import crypto from 'crypto';
 import { SHOPIFY_CONFIG, getScopeString } from './config';
 import { z } from 'zod';
 
-// Environment variable for encryption
-const ENCRYPTION_KEY = process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY;
+/**
+ * Get the encryption key, validating it on first use
+ * Deferred validation to support Next.js build phase
+ */
+let _encryptionKey: string | null = null;
 
-// Validate encryption key (skip in test environment to allow late initialization)
-if (process.env.NODE_ENV !== 'test' && (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64)) {
-  throw new Error(
-    'SHOPIFY_TOKEN_ENCRYPTION_KEY must be set and be 64 hex characters (32 bytes)'
-  );
+function getEncryptionKey(): string {
+  if (_encryptionKey !== null) {
+    return _encryptionKey;
+  }
+
+  const key = process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY;
+
+  if (!key || key.length !== 64) {
+    throw new Error(
+      'SHOPIFY_TOKEN_ENCRYPTION_KEY must be set and be 64 hex characters (32 bytes)'
+    );
+  }
+
+  _encryptionKey = key;
+  return _encryptionKey;
 }
 
 // Token response from Shopify
@@ -166,9 +179,7 @@ export async function exchangeCodeForToken(
  * @returns Encrypted token in format: iv:authTag:encryptedData (hex encoded)
  */
 export function encryptToken(token: string): string {
-  if (!ENCRYPTION_KEY) {
-    throw new Error('Encryption key not configured');
-  }
+  const encryptionKey = getEncryptionKey();
 
   // Generate random IV (12 bytes for GCM)
   const iv = crypto.randomBytes(12);
@@ -176,7 +187,7 @@ export function encryptToken(token: string): string {
   // Create cipher
   const cipher = crypto.createCipheriv(
     'aes-256-gcm',
-    Buffer.from(ENCRYPTION_KEY, 'hex'),
+    Buffer.from(encryptionKey, 'hex'),
     iv
   );
 
@@ -198,9 +209,7 @@ export function encryptToken(token: string): string {
  * @returns Plain text access token
  */
 export function decryptToken(encryptedToken: string): string {
-  if (!ENCRYPTION_KEY) {
-    throw new Error('Encryption key not configured');
-  }
+  const encryptionKey = getEncryptionKey();
 
   try {
     // Parse encrypted token format
@@ -218,7 +227,7 @@ export function decryptToken(encryptedToken: string): string {
     // Create decipher
     const decipher = crypto.createDecipheriv(
       'aes-256-gcm',
-      Buffer.from(ENCRYPTION_KEY, 'hex'),
+      Buffer.from(encryptionKey, 'hex'),
       iv
     );
 

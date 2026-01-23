@@ -3,7 +3,7 @@
  * Base fetch wrapper with error handling, JSON parsing, and correlation ID injection
  */
 
-import { getCorrelationId, addCorrelationIdToHeaders } from '../correlation';
+import { getCorrelationId, addCorrelationIdToHeaders } from '../correlation-client';
 
 import { ApiError, ApiClientError } from './types';
 
