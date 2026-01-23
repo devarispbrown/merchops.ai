@@ -86,13 +86,12 @@ export default defineConfig({
 
     /* Reporter */
     reporters: process.env.CI
-      ? ['verbose', 'json', 'html']
+      ? ['verbose', 'json']
       : ['verbose'],
 
     /* Output */
     outputFile: {
       json: './test-results/results.json',
-      html: './test-results/index.html',
     },
 
     /* Benchmark */

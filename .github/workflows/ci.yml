@@ -93,6 +93,8 @@ jobs:
 
       - name: Validate Prisma schema
         run: pnpm prisma:validate
+        env:
+          DATABASE_URL: postgresql://placeholder/schema_validation
 
   test:
     name: Unit and Integration Tests
@@ -218,7 +220,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @merchops/web exec playwright install --with-deps chromium
 
       - name: Generate Prisma Client
         run: pnpm prisma:generate
