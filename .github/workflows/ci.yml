@@ -281,6 +281,11 @@ jobs:
           REDIS_URL: redis://localhost:6379
           NEXTAUTH_SECRET: test-secret-for-ci-only
           NEXTAUTH_URL: http://localhost:3000
+          SHOPIFY_TOKEN_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          SHOPIFY_API_KEY: "test-api-key-12345"
+          SHOPIFY_API_SECRET: "test-api-secret-67890"
+          SHOPIFY_APP_URL: "https://test-app.example.com"
+          SHOPIFY_SCOPES: "read_products,write_products,read_inventory,read_orders"
 
       - name: Run E2E tests
         run: pnpm test:e2e
@@ -290,6 +295,11 @@ jobs:
           NODE_ENV: test
           NEXTAUTH_SECRET: test-secret-for-ci-only
           NEXTAUTH_URL: http://localhost:3000
+          SHOPIFY_TOKEN_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          SHOPIFY_API_KEY: "test-api-key-12345"
+          SHOPIFY_API_SECRET: "test-api-secret-67890"
+          SHOPIFY_APP_URL: "https://test-app.example.com"
+          SHOPIFY_SCOPES: "read_products,write_products,read_inventory,read_orders"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
