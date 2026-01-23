@@ -260,7 +260,7 @@ export async function seedActionDraft(opportunityId: string = MOCK_OPPORTUNITY_H
 /**
  * Seed execution (for history and failure testing)
  */
-export async function seedExecution(draftId: string, status: 'success' | 'failed' = 'success'): Promise<any> {
+export async function seedExecution(draftId: string, status: 'succeeded' | 'failed' = 'succeeded'): Promise<any> {
   const baseData = {
     workspace_id: TEST_WORKSPACE_ID,
     action_draft_id: draftId,
@@ -273,12 +273,12 @@ export async function seedExecution(draftId: string, status: 'success' | 'failed
     started_at: new Date('2024-01-15T12:20:00Z'),
   };
 
-  if (status === 'success') {
+  if (status === 'succeeded') {
     return await prisma.execution.create({
       data: {
         id: `exec-e2e-success-${Date.now()}`,
         ...baseData,
-        status: 'success',
+        status: 'succeeded',
         provider_response_json: {
           id: 'gid://shopify/PriceRule/555666',
           title: 'CLEARANCE15',
@@ -313,7 +313,7 @@ export async function seedAll(): Promise<void> {
   await seedOpportunities();  // Must come before seedEvents (which links to opportunities)
   await seedEvents();
   const draft = await seedActionDraft();
-  await seedExecution(draft.id, 'success');
+  await seedExecution(draft.id, 'succeeded');
 }
 
 // ============================================================================
