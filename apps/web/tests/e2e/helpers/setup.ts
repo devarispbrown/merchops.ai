@@ -310,8 +310,8 @@ export async function seedExecution(draftId: string, status: 'success' | 'failed
  */
 export async function seedAll(): Promise<void> {
   await seedTestData();
+  await seedOpportunities();  // Must come before seedEvents (which links to opportunities)
   await seedEvents();
-  await seedOpportunities();
   const draft = await seedActionDraft();
   await seedExecution(draft.id, 'success');
 }
