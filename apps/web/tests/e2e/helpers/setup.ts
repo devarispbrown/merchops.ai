@@ -141,7 +141,12 @@ export async function seedEvents(): Promise<any[]> {
 
   // Inventory threshold event
   const inventoryEvent = await prisma.event.upsert({
-    where: { dedupe_key: 'inventory_threshold_crossed:123456:2024-01-15' },
+    where: {
+      workspace_id_dedupe_key: {
+        workspace_id: TEST_WORKSPACE_ID,
+        dedupe_key: 'inventory_threshold_crossed:123456:2024-01-15',
+      },
+    },
     update: {},
     create: {
       id: 'event-inventory-001',
@@ -162,7 +167,12 @@ export async function seedEvents(): Promise<any[]> {
 
   // Customer inactivity event
   const inactivityEvent = await prisma.event.upsert({
-    where: { dedupe_key: 'customer_inactivity_60d:2024-01-15' },
+    where: {
+      workspace_id_dedupe_key: {
+        workspace_id: TEST_WORKSPACE_ID,
+        dedupe_key: 'customer_inactivity_60d:2024-01-15',
+      },
+    },
     update: {},
     create: {
       id: 'event-inactivity-001',
