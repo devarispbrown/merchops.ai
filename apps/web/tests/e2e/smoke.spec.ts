@@ -30,3 +30,58 @@ test.describe('Smoke Tests', () => {
     expect(body).toHaveProperty('status');
   });
 });
+
+test.describe('Landing Page Smoke Tests', () => {
+  test('landing page loads with correct hero copy', async ({ page }) => {
+    const response = await page.goto('/');
+    expect(response?.status()).toBeLessThan(400);
+
+    // Verify exact Magic Patterns hero copy in the h1 heading
+    await expect(page.getByRole('heading', { name: /Campaigns ready to send.*Not another dashboard/i })).toBeVisible();
+  });
+
+  test('landing page has MerchOps.ai logo', async ({ page }) => {
+    await page.goto('/');
+    // Select the nav logo specifically
+    await expect(page.getByRole('navigation').getByText('MerchOps.ai')).toBeVisible();
+  });
+
+  test('hero Join the beta CTA navigates to signup', async ({ page }) => {
+    await page.goto('/');
+    // Click the hero CTA button
+    await page.click('button:has-text("Join the beta")');
+    // Verify navigation to signup with returnTo param
+    await expect(page).toHaveURL(/\/signup.*returnTo/);
+  });
+
+  test('nav Join the beta CTA navigates to signup', async ({ page }) => {
+    await page.goto('/');
+    // Click the nav button (first Join the beta in nav)
+    const navButton = page.locator('nav button:has-text("Join the beta")');
+    await navButton.click();
+    await expect(page).toHaveURL(/\/signup.*returnTo/);
+  });
+
+  test('pricing Start free trial CTA navigates to signup', async ({ page }) => {
+    await page.goto('/');
+    // Scroll to pricing section
+    await page.evaluate(() => {
+      document.getElementById('pricing')?.scrollIntoView();
+    });
+    // Click first pricing CTA
+    const pricingCta = page.locator('#pricing a:has-text("Start free trial")').first();
+    await pricingCta.click();
+    await expect(page).toHaveURL(/\/signup.*returnTo/);
+  });
+
+  test('final CTA navigates to signup', async ({ page }) => {
+    await page.goto('/');
+    // Scroll to CTA section
+    await page.evaluate(() => {
+      document.getElementById('cta')?.scrollIntoView();
+    });
+    // Click the final CTA button
+    await page.click('#cta button:has-text("Start your free trial")');
+    await expect(page).toHaveURL(/\/signup.*returnTo/);
+  });
+});

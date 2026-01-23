@@ -177,6 +177,40 @@ pnpm worker:executions
 | `action-execution` | Execute approved actions | On approval |
 | `outcome-resolution` | Compute helped/neutral/hurt | Async |
 
+## Marketing Site
+
+The root route (`/`) serves the MerchOps landing page for unauthenticated users. Authenticated users are automatically redirected to `/queue`.
+
+### Key Details
+
+| Aspect | Description |
+|--------|-------------|
+| Route | `/` (root) |
+| Component | `apps/web/components/marketing/pages/LandingPage.tsx` |
+| Source of Truth | Magic Patterns design tool |
+
+### Conversion CTAs
+
+All primary conversion buttons route to `/signup?returnTo=/app`:
+- "Join the beta" (navigation, hero, final CTA)
+- "Start your free trial" (final CTA)
+
+After signup and login, users are redirected to the `returnTo` destination (defaults to `/queue`).
+
+### Editing Guidelines
+
+**Copy and Tailwind classnames are contractually fixed to the Magic Patterns source.** Do not modify styling or copy directly in the codebase.
+
+To make changes:
+1. Update the design in Magic Patterns
+2. Export the updated code
+3. Replace files in `apps/web/components/marketing/`
+4. Preserve routing logic and event handlers
+
+See `apps/web/components/marketing/README.md` for detailed component documentation.
+
+---
+
 ## Project Structure
 
 ```
@@ -185,6 +219,7 @@ pnpm worker:executions
     /(auth)                  # Authentication routes
     /(dashboard)             # Protected dashboard routes
   /components                # React components
+    /marketing               # Landing page components (Magic Patterns source)
   /lib                       # Client utilities
   /server                    # Server-side code
     /auth                    # NextAuth configuration

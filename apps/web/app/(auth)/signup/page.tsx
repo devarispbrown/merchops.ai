@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/Input';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/queue';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -46,7 +48,8 @@ export default function SignupPage() {
         return;
       }
 
-      router.push('/login?registered=true');
+      const loginUrl = `/login?registered=true${returnTo !== '/queue' ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`;
+      router.push(loginUrl);
     } catch {
       setError('An error occurred. Please try again.');
     } finally {
@@ -118,7 +121,7 @@ export default function SignupPage() {
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link
-            href="/login"
+            href={`/login${returnTo !== '/queue' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}
             className="text-primary hover:underline font-medium"
           >
             Sign in

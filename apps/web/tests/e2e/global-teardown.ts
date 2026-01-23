@@ -3,33 +3,41 @@
  * MerchOps Beta MVP - E2E Test Global Teardown
  *
  * Runs once after all E2E tests to:
- * - Clean up test data
+ * - Clean up test data (if database available)
  * - Close database connections
  * - Report test summary
  */
 
 import { FullConfig } from '@playwright/test';
-import { cleanupAll, disconnect } from './helpers/setup';
 
-async function globalTeardown(config: FullConfig) {
+async function globalTeardown(_config: FullConfig) {
   console.log('\n🧹 Global E2E Teardown: Cleaning up test environment...\n');
 
-  try {
-    // Clean up test data
-    console.log('🗑️  Cleaning up test data...');
-    await cleanupAll();
-    console.log('✅ Test data cleaned up\n');
+  // Skip database cleanup in CI or if SKIP_DB_SETUP is set
+  const skipDbCleanup = process.env.CI === 'true' || process.env.SKIP_DB_SETUP === 'true';
 
-    // Disconnect from database
-    console.log('🔌 Disconnecting from database...');
-    await disconnect();
-    console.log('✅ Database disconnected\n');
+  if (!skipDbCleanup) {
+    try {
+      // Dynamically import setup helpers (they require database connection)
+      const { cleanupAll, disconnect } = await import('./helpers/setup');
 
-    console.log('✅ Global teardown complete\n');
-  } catch (error) {
-    console.error('\n❌ Global teardown failed:', error);
-    // Don't throw - we want tests to report their results even if teardown fails
+      // Clean up test data
+      console.log('🗑️  Cleaning up test data...');
+      await cleanupAll();
+      console.log('✅ Test data cleaned up\n');
+
+      // Disconnect from database
+      console.log('🔌 Disconnecting from database...');
+      await disconnect();
+      console.log('✅ Database disconnected\n');
+    } catch (error) {
+      console.warn('⚠️  Database cleanup skipped (not available):', (error as Error).message);
+    }
+  } else {
+    console.log('⏭️  Skipping database cleanup (CI/SKIP_DB_SETUP)\n');
   }
+
+  console.log('✅ Global teardown complete\n');
 }
 
 export default globalTeardown;

@@ -1,11 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
 import path from 'path';
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// require('dotenv').config();
+dotenv.config({ path: path.resolve(__dirname, '.env.test') });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -94,6 +95,13 @@ export default defineConfig({
         stdout: 'ignore',
         stderr: 'pipe',
         timeout: 120000,
+        env: {
+          ...process.env,
+          AUTH_SECRET: 'test-secret-key-for-testing-only',
+          NEXTAUTH_SECRET: 'test-secret-key-for-testing-only',
+          NEXTAUTH_URL: 'http://localhost:3000',
+          AUTH_URL: 'http://localhost:3000',
+        },
       },
 
   /* Global setup and teardown */

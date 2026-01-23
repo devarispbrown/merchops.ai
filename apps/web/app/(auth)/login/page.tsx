@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/queue';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +33,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/queue');
+        router.push(returnTo);
       }
     } catch {
       setError('An error occurred. Please try again.');
@@ -86,7 +88,7 @@ export default function LoginPage() {
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
           <Link
-            href="/signup"
+            href={`/signup${returnTo !== '/queue' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}
             className="text-primary hover:underline font-medium"
           >
             Sign up
