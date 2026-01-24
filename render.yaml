@@ -34,9 +34,22 @@ services:
       - key: NEXTAUTH_SECRET
         generateValue: true
 
+      # Google OAuth
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # Shopify Store Integration (API access)
       - key: SHOPIFY_CLIENT_ID
         sync: false
       - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+
+      # Shopify OAuth (for user authentication, optional - falls back to above)
+      - key: SHOPIFY_AUTH_CLIENT_ID
+        sync: false
+      - key: SHOPIFY_AUTH_CLIENT_SECRET
         sync: false
       - key: SHOPIFY_SCOPES
         value: read_products,write_products,read_orders,read_customers,read_inventory,write_inventory,write_discounts,read_price_rules,write_price_rules
@@ -49,8 +62,11 @@ services:
       - key: SENTRY_DSN
         sync: false
 
-      - key: EMAIL_PROVIDER_API_KEY
+      # Email (Magic Link + notifications)
+      - key: RESEND_API_KEY
         sync: false
+      - key: EMAIL_FROM_ADDRESS
+        value: MerchOps <noreply@merchops.com>
 
       - key: AI_PROVIDER
         value: anthropic
@@ -108,7 +124,9 @@ services:
 
       - key: SENTRY_DSN
         sync: false
-      - key: EMAIL_PROVIDER_API_KEY
+
+      # Email
+      - key: RESEND_API_KEY
         sync: false
 
       - key: AI_PROVIDER
