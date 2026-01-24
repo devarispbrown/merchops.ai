@@ -39,7 +39,7 @@ const mockStripe = {
 };
 
 vi.mock('@/server/billing/customer', () => ({
-  stripe: mockStripe,
+  getStripe: () => mockStripe,
 }));
 
 // Import after mocks are set up
