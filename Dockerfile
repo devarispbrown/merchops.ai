@@ -45,7 +45,7 @@ COPY . .
 # Generate Prisma Client
 RUN pnpm prisma:generate
 
-# Build Next.js app with standalone output for minimal runtime
+# Build Next.js app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -56,8 +56,9 @@ RUN pnpm --filter @merchops/web build
 # Stage 4: Runner - Production runtime
 FROM node:20-alpine AS runner
 
-# Install required runtime dependencies
-RUN apk add --no-cache \
+# Install pnpm and required runtime dependencies
+RUN npm install -g pnpm@8.15.0 && \
+    apk add --no-cache \
     openssl \
     libc6-compat \
     curl \
@@ -74,17 +75,26 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# Copy Prisma schema for migrations (client is included in standalone output)
+# Copy workspace configuration
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-lock.yaml ./
+
+# Copy Prisma schema for migrations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copy standalone Next.js build output
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+# Copy node_modules (production dependencies)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Copy package.json for metadata
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/package.json
+# Copy shared package
+COPY --from=builder --chown=nextjs:nodejs /app/packages/shared ./packages/shared
+
+# Copy web app with build output
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next ./apps/web/.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/next.config.mjs ./apps/web/
 
 # Create directory for temporary files
 RUN mkdir -p /tmp && chown nextjs:nodejs /tmp
@@ -102,5 +112,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
-# Start the Next.js server
-CMD ["node", "apps/web/server.js"]
+# Start the Next.js server using pnpm
+CMD ["pnpm", "--filter", "@merchops/web", "start"]
