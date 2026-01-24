@@ -140,6 +140,10 @@ export async function createEvent(
   const { workspace_id, type, occurred_at, payload, source, dedupe_key } =
     input;
 
+  // TODO: Billing integration - uncomment when billing module is complete
+  // import { checkLimit, incrementUsage } from '@/server/billing';
+  // await checkLimit(workspace_id, 'events');
+
   // Generate dedupe key if not provided
   const finalDedupeKey =
     dedupe_key ||
@@ -158,6 +162,9 @@ export async function createEvent(
         source,
       },
     });
+
+    // TODO: Billing integration - uncomment when billing module is complete
+    // await incrementUsage(workspace_id, 'events');
 
     return event;
   } catch (error: any) {

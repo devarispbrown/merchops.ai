@@ -23,7 +23,7 @@ interface AuthenticatedRequest extends NextRequest {
 const publicRoutes = ["/", "/login", "/signup", "/verify-request"];
 
 // API routes that don't require authentication
-const publicApiRoutes = ["/api/auth", "/api/health"];
+const publicApiRoutes = ["/api/auth", "/api/health", "/api/billing/webhooks"];
 
 /**
  * Check if route is public

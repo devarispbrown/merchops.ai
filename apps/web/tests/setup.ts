@@ -273,6 +273,13 @@ beforeAll(() => {
 
   // Set Shopify token encryption key for tests (64 hex characters = 32 bytes)
   process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+  // Set Stripe environment variables for tests
+  process.env.STRIPE_SECRET_KEY = 'sk_test_mock_key_for_testing_only';
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_mock_secret_for_testing_only';
+  process.env.STRIPE_STARTER_PRICE_ID = 'price_test_starter';
+  process.env.STRIPE_GROWTH_PRICE_ID = 'price_test_growth';
+  process.env.STRIPE_PRO_PRICE_ID = 'price_test_pro';
 });
 
 afterAll(() => {

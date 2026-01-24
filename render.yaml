@@ -86,6 +86,20 @@ services:
       - key: OLLAMA_BASE_URL
         sync: false
 
+      # Stripe (Payments)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_STARTER_PRICE_ID
+        sync: false
+      - key: STRIPE_GROWTH_PRICE_ID
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+
       - key: LOG_LEVEL
         value: info
 
@@ -136,6 +150,20 @@ services:
       - key: AI_MODEL_TIER
         value: balanced
       - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # Stripe (Payments)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_STARTER_PRICE_ID
+        sync: false
+      - key: STRIPE_GROWTH_PRICE_ID
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
         sync: false
 
       - key: LOG_LEVEL

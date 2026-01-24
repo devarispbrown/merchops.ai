@@ -108,6 +108,27 @@ enum EventSource {
 }
 
 // ============================================================================
+// BILLING
+// ============================================================================
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  canceled
+  unpaid
+  incomplete
+  incomplete_expired
+}
+
+enum PlanTier {
+  trial      // 14-day free trial
+  starter    // $49/mo - stores under $50K/mo
+  growth     // $149/mo - stores $50K-$500K/mo
+  pro        // $399/mo - stores $500K+/mo
+}
+
+// ============================================================================
 // TENANCY
 // ============================================================================
 
@@ -126,6 +147,7 @@ model Workspace {
   action_drafts       ActionDraft[]
   executions          Execution[]
   ai_generations      AiGeneration[]
+  subscription        Subscription?
 
   @@index([created_at])
 }
@@ -349,4 +371,68 @@ model AiGeneration {
   @@index([workspace_id, prompt_version])
   @@index([created_at])
   @@index([model])
+}
+
+// ============================================================================
+// BILLING & SUBSCRIPTIONS
+// ============================================================================
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  workspace_id           String             @unique
+  stripe_customer_id     String             @unique
+  stripe_subscription_id String?            @unique
+  plan_tier              PlanTier           @default(trial)
+  status                 SubscriptionStatus @default(trialing)
+  current_period_start   DateTime?
+  current_period_end     DateTime?
+  trial_start            DateTime?
+  trial_end              DateTime?
+  cancel_at_period_end   Boolean            @default(false)
+  canceled_at            DateTime?
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
+
+  // Relations
+  workspace      Workspace       @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  usage_records  UsageRecord[]
+  billing_events BillingEvent[]
+
+  @@index([stripe_customer_id])
+  @@index([status])
+  @@index([plan_tier])
+}
+
+model UsageRecord {
+  id              String   @id @default(uuid())
+  subscription_id String
+  metric          String   // 'opportunities' | 'actions' | 'events'
+  count           Int      @default(0)
+  period_start    DateTime
+  period_end      DateTime
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  subscription Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@unique([subscription_id, metric, period_start])
+  @@index([subscription_id, period_start])
+  @@index([metric])
+}
+
+model BillingEvent {
+  id              String   @id @default(uuid())
+  subscription_id String
+  event_type      String
+  stripe_event_id String?  @unique
+  payload         Json
+  created_at      DateTime @default(now())
+
+  // Relations
+  subscription Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@index([subscription_id])
+  @@index([event_type])
+  @@index([created_at])
 }

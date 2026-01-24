@@ -10,3 +10,4 @@ export * from './useOutcomes';
 export * from './useShopifyConnection';
 export * from './useConfidence';
 export * from './useToast';
+export * from './useBilling';

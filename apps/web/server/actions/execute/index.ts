@@ -52,6 +52,10 @@ export async function executeAction(
 ): Promise<ExecuteActionResult> {
   const { actionDraftId, workspaceId } = input;
 
+  // TODO: Billing integration - uncomment when billing module is complete
+  // import { checkLimit, incrementUsage } from '@/server/billing';
+  // await checkLimit(workspaceId, 'actions');
+
   logger.info({
     actionDraftId,
     workspaceId,
@@ -148,6 +152,12 @@ export async function executeAction(
       executionId: execution.id,
       success: result.success,
     }, 'Action execution completed');
+
+    // TODO: Billing integration - uncomment when billing module is complete
+    // Only increment usage on successful execution
+    // if (result.success) {
+    //   await incrementUsage(workspaceId, 'actions');
+    // }
 
     return {
       success: result.success,
