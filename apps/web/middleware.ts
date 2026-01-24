@@ -2,6 +2,9 @@
 // Protects routes and handles authentication redirects with CSRF protection
 // Also adds correlation IDs for request tracing
 
+// Use Node.js runtime instead of Edge to support Prisma and process.on
+export const runtime = "nodejs";
+
 import { auth } from "@/server/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
