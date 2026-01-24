@@ -5,8 +5,15 @@
  * These functions are called from API routes and server actions.
  */
 
-import { shopifySyncQueue, eventComputeQueue, opportunityGenerateQueue, executionQueue, outcomeComputeQueue } from '../queues';
-import { JOB_PRIORITIES } from '../config';
+import {
+  getShopifySyncQueue,
+  getEventComputeQueue,
+  getOpportunityGenerateQueue,
+  getExecutionQueue,
+  getOutcomeComputeQueue,
+  QueueUnavailableError,
+} from '../queues';
+import { JOB_PRIORITIES, QUEUE_NAMES } from '../config';
 
 // ============================================================================
 // SHOPIFY SYNC PROCESSORS
@@ -23,7 +30,12 @@ export interface EnqueueShopifySyncParams {
 export async function enqueueShopifySync(params: EnqueueShopifySyncParams) {
   const { workspace_id, sync_type, resources, correlation_id, priority } = params;
 
-  const job = await shopifySyncQueue.add(
+  const queue = getShopifySyncQueue();
+  if (!queue) {
+    throw new QueueUnavailableError(QUEUE_NAMES.SHOPIFY_SYNC);
+  }
+
+  const job = await queue.add(
     `sync-${sync_type}-${workspace_id}`,
     {
       workspace_id,
@@ -61,7 +73,12 @@ export interface EnqueueEventComputeParams {
 export async function enqueueEventCompute(params: EnqueueEventComputeParams) {
   const { workspace_id, trigger, event_types, correlation_id, priority } = params;
 
-  const job = await eventComputeQueue.add(
+  const queue = getEventComputeQueue();
+  if (!queue) {
+    throw new QueueUnavailableError(QUEUE_NAMES.EVENT_COMPUTE);
+  }
+
+  const job = await queue.add(
     `compute-events-${workspace_id}`,
     {
       workspace_id,
@@ -93,7 +110,12 @@ export interface EnqueueOpportunityGenerateParams {
 export async function enqueueOpportunityGenerate(params: EnqueueOpportunityGenerateParams) {
   const { workspace_id, trigger, event_ids, correlation_id, priority } = params;
 
-  const job = await opportunityGenerateQueue.add(
+  const queue = getOpportunityGenerateQueue();
+  if (!queue) {
+    throw new QueueUnavailableError(QUEUE_NAMES.OPPORTUNITY_GENERATE);
+  }
+
+  const job = await queue.add(
     `generate-opportunities-${workspace_id}`,
     {
       workspace_id,
@@ -137,7 +159,12 @@ export async function enqueueExecution(params: EnqueueExecutionParams) {
     priority,
   } = params;
 
-  const job = await executionQueue.add(
+  const queue = getExecutionQueue();
+  if (!queue) {
+    throw new QueueUnavailableError(QUEUE_NAMES.EXECUTION);
+  }
+
+  const job = await queue.add(
     `execute-${execution_id}`,
     {
       execution_id,
@@ -172,7 +199,12 @@ export interface EnqueueOutcomeComputeParams {
 export async function enqueueOutcomeCompute(params: EnqueueOutcomeComputeParams) {
   const { execution_id, workspace_id, correlation_id, delay_ms, priority } = params;
 
-  const job = await outcomeComputeQueue.add(
+  const queue = getOutcomeComputeQueue();
+  if (!queue) {
+    throw new QueueUnavailableError(QUEUE_NAMES.OUTCOME_COMPUTE);
+  }
+
+  const job = await queue.add(
     `compute-outcome-${execution_id}`,
     {
       execution_id,

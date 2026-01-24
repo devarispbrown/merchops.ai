@@ -8,7 +8,7 @@
 
 import { Job, Worker } from 'bullmq';
 import { prisma } from '../../db/client';
-import { QUEUE_NAMES, redisConnection, defaultWorkerOptions } from '../config';
+import { QUEUE_NAMES, redisConnection, defaultWorkerOptions, isRedisConfigured } from '../config';
 import {
   createWorkerLogger,
   logJobStart,
@@ -20,7 +20,7 @@ import { ExecutionType, ExecutionStatus, isRetryableError as _isRetryableError }
 import { executeDiscount } from '../../actions/execute/discount';
 import { executePauseProduct } from '../../actions/execute/pause-product';
 import { executeEmail } from '../../actions/execute/email';
-import { outcomeComputeQueue } from '../queues';
+import { getOutcomeComputeQueue } from '../queues';
 
 // ============================================================================
 // TYPES
@@ -52,38 +52,45 @@ interface ExecutionResult {
 
 const logger = createWorkerLogger('execution');
 
-export const executionWorker = new Worker<ExecutionJobData, ExecutionResult>(
-  QUEUE_NAMES.EXECUTION,
-  processExecution,
-  {
-    ...defaultWorkerOptions,
-    connection: redisConnection,
-  }
-);
+// Only create worker if Redis is configured
+export const executionWorker = isRedisConfigured() && redisConnection
+  ? new Worker<ExecutionJobData, ExecutionResult>(
+      QUEUE_NAMES.EXECUTION,
+      processExecution,
+      {
+        ...defaultWorkerOptions,
+        connection: redisConnection,
+      }
+    )
+  : null;
 
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-executionWorker.on('completed', (job, result) => {
-  logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
-});
+if (executionWorker) {
+  executionWorker.on('completed', (job, result) => {
+    logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
+  });
 
-executionWorker.on('failed', (job, error) => {
-  if (job) {
-    logJobFailed(
-      job.id!,
-      job.name!,
-      error as Error,
-      job.attemptsMade,
-      job.data.workspace_id
-    );
-  }
-});
+  executionWorker.on('failed', (job, error) => {
+    if (job) {
+      logJobFailed(
+        job.id!,
+        job.name!,
+        error as Error,
+        job.attemptsMade,
+        job.data.workspace_id
+      );
+    }
+  });
 
-executionWorker.on('error', (error) => {
-  logger.error({ error: error.message, stack: error.stack }, 'Worker error');
-});
+  executionWorker.on('error', (error) => {
+    logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+  });
+} else {
+  logger.warn('Execution worker not initialized - Redis not configured');
+}
 
 // ============================================================================
 // JOB PROCESSOR
@@ -160,17 +167,20 @@ async function processExecution(
       logExecution(execution_id, execution_type, 'succeeded', workspace_id);
 
       // Schedule outcome computation (delayed by 24 hours for data collection)
-      await outcomeComputeQueue.add(
-        'compute-outcome',
-        {
-          execution_id,
-          workspace_id,
-          correlation_id: job.data.correlation_id,
-        },
-        {
-          delay: 24 * 60 * 60 * 1000, // 24 hours
-        }
-      );
+      const outcomeQueue = getOutcomeComputeQueue();
+      if (outcomeQueue) {
+        await outcomeQueue.add(
+          'compute-outcome',
+          {
+            execution_id,
+            workspace_id,
+            correlation_id: job.data.correlation_id,
+          },
+          {
+            delay: 24 * 60 * 60 * 1000, // 24 hours
+          }
+        );
+      }
 
       return {
         execution_id,
@@ -288,6 +298,10 @@ async function checkIdempotency(
 // ============================================================================
 
 export async function shutdownExecutionWorker(): Promise<void> {
+  if (!executionWorker) {
+    logger.debug('Execution worker not running - nothing to shut down');
+    return;
+  }
   logger.info('Shutting down execution worker...');
   await executionWorker.close();
   logger.info('Execution worker shut down');

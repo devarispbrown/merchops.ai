@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import crypto from 'crypto';
 import { logger } from '../../observability/logger';
-import { eventComputeQueue } from '../../jobs/queues';
+import { getEventComputeQueue } from '../../jobs/queues';
 
 // Inventory level webhook payload schema
 const inventoryLevelWebhookSchema = z.object({
@@ -59,25 +59,34 @@ export async function handleInventoryLevelUpdated(
     // 3. Detect out-of-stock events
     // 4. Detect back-in-stock events
     // 5. Detect inventory threshold crossed events
-    await eventComputeQueue.add(
-      'compute-inventory-events',
-      {
-        workspaceId,
-        inventoryItemId: inventoryLevel.inventory_item_id.toString(),
-        locationId: inventoryLevel.location_id.toString(),
-        inventoryData: inventoryLevel,
-        webhookType: 'inventory_levels/update',
-      },
-      {
-        jobId: `inventory-updated-${workspaceId}-${inventoryLevel.inventory_item_id}-${inventoryLevel.location_id}-${Date.now()}`,
-      }
-    );
+    const queue = getEventComputeQueue();
+    if (queue) {
+      await queue.add(
+        'compute-inventory-events',
+        {
+          workspaceId,
+          inventoryItemId: inventoryLevel.inventory_item_id.toString(),
+          locationId: inventoryLevel.location_id.toString(),
+          inventoryData: inventoryLevel,
+          webhookType: 'inventory_levels/update',
+        },
+        {
+          jobId: `inventory-updated-${workspaceId}-${inventoryLevel.inventory_item_id}-${inventoryLevel.location_id}-${Date.now()}`,
+        }
+      );
 
-    logger.info({
-      correlationId,
-      workspaceId,
-      inventoryItemId: inventoryLevel.inventory_item_id,
-    }, 'Inventory level event computation queued');
+      logger.info({
+        correlationId,
+        workspaceId,
+        inventoryItemId: inventoryLevel.inventory_item_id,
+      }, 'Inventory level event computation queued');
+    } else {
+      logger.warn({
+        correlationId,
+        workspaceId,
+        inventoryItemId: inventoryLevel.inventory_item_id,
+      }, 'Event computation skipped - Redis not configured');
+    }
   } catch (error) {
     logger.error({
       correlationId,

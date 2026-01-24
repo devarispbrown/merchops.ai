@@ -8,14 +8,14 @@
 
 import { Job, Worker } from 'bullmq';
 import { prisma } from '../../db/client';
-import { QUEUE_NAMES, redisConnection, defaultWorkerOptions } from '../config';
+import { QUEUE_NAMES, redisConnection, defaultWorkerOptions, isRedisConfigured } from '../config';
 import {
   createWorkerLogger,
   logJobStart,
   logJobComplete,
   logJobFailed,
 } from '../../observability/logger';
-import { eventComputeQueue } from '../queues';
+import { getEventComputeQueue } from '../queues';
 
 // ============================================================================
 // TYPES
@@ -46,38 +46,45 @@ interface ShopifySyncResult {
 
 const logger = createWorkerLogger('shopify-sync');
 
-export const shopifySyncWorker = new Worker<ShopifySyncJobData, ShopifySyncResult>(
-  QUEUE_NAMES.SHOPIFY_SYNC,
-  processShopifySync,
-  {
-    ...defaultWorkerOptions,
-    connection: redisConnection,
-  }
-);
+// Only create worker if Redis is configured
+export const shopifySyncWorker = isRedisConfigured() && redisConnection
+  ? new Worker<ShopifySyncJobData, ShopifySyncResult>(
+      QUEUE_NAMES.SHOPIFY_SYNC,
+      processShopifySync,
+      {
+        ...defaultWorkerOptions,
+        connection: redisConnection,
+      }
+    )
+  : null;
 
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-shopifySyncWorker.on('completed', (job, result) => {
-  logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
-});
+if (shopifySyncWorker) {
+  shopifySyncWorker.on('completed', (job, result) => {
+    logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
+  });
 
-shopifySyncWorker.on('failed', (job, error) => {
-  if (job) {
-    logJobFailed(
-      job.id!,
-      job.name!,
-      error as Error,
-      job.attemptsMade,
-      job.data.workspace_id
-    );
-  }
-});
+  shopifySyncWorker.on('failed', (job, error) => {
+    if (job) {
+      logJobFailed(
+        job.id!,
+        job.name!,
+        error as Error,
+        job.attemptsMade,
+        job.data.workspace_id
+      );
+    }
+  });
 
-shopifySyncWorker.on('error', (error) => {
-  logger.error({ error: error.message, stack: error.stack }, 'Worker error');
-});
+  shopifySyncWorker.on('error', (error) => {
+    logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+  });
+} else {
+  logger.warn('Shopify sync worker not initialized - Redis not configured');
+}
 
 // ============================================================================
 // JOB PROCESSOR
@@ -144,17 +151,20 @@ async function processShopifySync(
     const duration_ms = Date.now() - startTime;
 
     // After successful sync, trigger event computation
-    await eventComputeQueue.add(
-      'compute-events',
-      {
-        workspace_id,
-        trigger: 'shopify_sync_completed',
-        correlation_id: job.data.correlation_id,
-      },
-      {
-        priority: 5, // High priority
-      }
-    );
+    const eventQueue = getEventComputeQueue();
+    if (eventQueue) {
+      await eventQueue.add(
+        'compute-events',
+        {
+          workspace_id,
+          trigger: 'shopify_sync_completed',
+          correlation_id: job.data.correlation_id,
+        },
+        {
+          priority: 5, // High priority
+        }
+      );
+    }
 
     logger.info(
       { workspace_id, syncResults, duration_ms },
@@ -426,6 +436,10 @@ function generateMockInventoryLevels(count: number): any[] {
 // ============================================================================
 
 export async function shutdownShopifySyncWorker(): Promise<void> {
+  if (!shopifySyncWorker) {
+    logger.debug('Shopify sync worker not running - nothing to shut down');
+    return;
+  }
   logger.info('Shutting down Shopify sync worker...');
   await shopifySyncWorker.close();
   logger.info('Shopify sync worker shut down');

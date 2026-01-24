@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCorrelationId } from '@/lib/correlation';
 import { getWorkspaceId, requireAuth } from '@/server/auth/session';
 import { prisma } from '@/server/db/client';
-import { opportunityGenerateQueue } from '@/server/jobs/queues';
+import { getOpportunityGenerateQueue } from '@/server/jobs/queues';
 import {
   asyncHandler,
   ValidationError,
@@ -163,9 +163,26 @@ async function replayEventsHandler(request: NextRequest) {
     });
   }
 
+  // Check if queues are available
+  const opportunityQueue = getOpportunityGenerateQueue();
+  if (!opportunityQueue) {
+    logger.error({
+      workspaceId,
+      correlationId,
+    }, 'Cannot replay events - Redis not configured');
+
+    return NextResponse.json({
+      success: false,
+      message: 'Cannot replay events - background job system (Redis) is not configured',
+      eventsQueued: 0,
+      jobIds: [],
+      correlationId,
+    } as ReplayResponse, { status: 503 });
+  }
+
   // Queue opportunity generation jobs for each event
   const jobPromises = events.map((event) =>
-    opportunityGenerateQueue.add(
+    opportunityQueue.add(
       'replay-event-opportunity',
       {
         eventId: event.id,

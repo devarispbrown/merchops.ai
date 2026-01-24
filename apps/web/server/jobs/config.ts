@@ -8,15 +8,24 @@
 import { QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 
 // Environment variables with defaults
-const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
+const REDIS_HOST = process.env.REDIS_HOST;
+const REDIS_PORT = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : undefined;
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
 const REDIS_TLS = process.env.REDIS_TLS === 'true';
 const REDIS_URL = process.env.REDIS_URL;
 
 /**
+ * Check if Redis is explicitly configured
+ * Returns true only if REDIS_URL or REDIS_HOST is set
+ */
+export function isRedisConfigured(): boolean {
+  return Boolean(REDIS_URL || REDIS_HOST);
+}
+
+/**
  * Redis connection configuration
  * Supports both direct connection and URL-based (e.g., Upstash)
+ * Returns null if Redis is not configured
  */
 export const redisConnection = REDIS_URL
   ? {
@@ -24,9 +33,10 @@ export const redisConnection = REDIS_URL
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
     }
-  : {
+  : REDIS_HOST
+  ? {
       host: REDIS_HOST,
-      port: REDIS_PORT,
+      port: REDIS_PORT || 6379,
       password: REDIS_PASSWORD,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
@@ -35,7 +45,8 @@ export const redisConnection = REDIS_URL
           rejectUnauthorized: false,
         },
       }),
-    };
+    }
+  : null;
 
 /**
  * Alias for backwards compatibility
@@ -118,11 +129,14 @@ export const queueJobOptions: Record<QueueName, Partial<JobsOptions>> = {
 
 /**
  * Default queue options
+ * Returns null if Redis is not configured
  */
-export const defaultQueueOptions: QueueOptions = {
-  connection: redisConnection,
-  defaultJobOptions,
-};
+export const defaultQueueOptions: QueueOptions | null = redisConnection
+  ? {
+      connection: redisConnection,
+      defaultJobOptions,
+    }
+  : null;
 
 /**
  * Default worker options

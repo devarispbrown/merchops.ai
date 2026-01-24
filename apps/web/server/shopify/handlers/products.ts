@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import crypto from 'crypto';
 import { logger } from '../../observability/logger';
-import { eventComputeQueue } from '../../jobs/queues';
+import { getEventComputeQueue } from '../../jobs/queues';
 
 // Product webhook payload schema
 const productWebhookSchema = z.object({
@@ -78,24 +78,33 @@ export async function handleProductUpdated(
     // 2. Detect status changes (e.g., paused by action execution)
     // 3. Detect significant price changes
     // 4. Check for action execution results
-    await eventComputeQueue.add(
-      'compute-product-updated-events',
-      {
-        workspaceId,
-        productId: product.id.toString(),
-        productData: product,
-        webhookType: 'products/update',
-      },
-      {
-        jobId: `product-updated-${workspaceId}-${product.id}-${Date.now()}`,
-      }
-    );
+    const queue = getEventComputeQueue();
+    if (queue) {
+      await queue.add(
+        'compute-product-updated-events',
+        {
+          workspaceId,
+          productId: product.id.toString(),
+          productData: product,
+          webhookType: 'products/update',
+        },
+        {
+          jobId: `product-updated-${workspaceId}-${product.id}-${Date.now()}`,
+        }
+      );
 
-    logger.info({
-      correlationId,
-      workspaceId,
-      productId: product.id,
-    }, 'Product updated event computation queued');
+      logger.info({
+        correlationId,
+        workspaceId,
+        productId: product.id,
+      }, 'Product updated event computation queued');
+    } else {
+      logger.warn({
+        correlationId,
+        workspaceId,
+        productId: product.id,
+      }, 'Event computation skipped - Redis not configured');
+    }
   } catch (error) {
     logger.error({
       correlationId,

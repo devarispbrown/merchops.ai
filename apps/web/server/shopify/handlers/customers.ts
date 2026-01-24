@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import crypto from 'crypto';
 import { logger } from '../../observability/logger';
-import { eventComputeQueue } from '../../jobs/queues';
+import { getEventComputeQueue } from '../../jobs/queues';
 
 // Customer webhook payload schema
 const customerWebhookSchema = z.object({
@@ -69,24 +69,33 @@ export async function handleCustomerUpdated(
     // 2. Calculate days since last order
     // 3. Check for inactivity threshold events (30/60/90 days)
     // 4. Update customer lifetime value metrics
-    await eventComputeQueue.add(
-      'compute-customer-events',
-      {
-        workspaceId,
-        customerId: customer.id.toString(),
-        customerData: customer,
-        webhookType: 'customers/update',
-      },
-      {
-        jobId: `customer-updated-${workspaceId}-${customer.id}-${Date.now()}`,
-      }
-    );
+    const queue = getEventComputeQueue();
+    if (queue) {
+      await queue.add(
+        'compute-customer-events',
+        {
+          workspaceId,
+          customerId: customer.id.toString(),
+          customerData: customer,
+          webhookType: 'customers/update',
+        },
+        {
+          jobId: `customer-updated-${workspaceId}-${customer.id}-${Date.now()}`,
+        }
+      );
 
-    logger.info({
-      correlationId,
-      workspaceId,
-      customerId: customer.id,
-    }, 'Customer event computation queued');
+      logger.info({
+        correlationId,
+        workspaceId,
+        customerId: customer.id,
+      }, 'Customer event computation queued');
+    } else {
+      logger.warn({
+        correlationId,
+        workspaceId,
+        customerId: customer.id,
+      }, 'Event computation skipped - Redis not configured');
+    }
   } catch (error) {
     logger.error({
       correlationId,

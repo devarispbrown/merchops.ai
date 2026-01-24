@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 import { logger } from '../../observability/logger';
-import { eventComputeQueue } from '../../jobs/queues';
+import { getEventComputeQueue } from '../../jobs/queues';
 
 // Order webhook payload schema
 const orderWebhookSchema = z.object({
@@ -85,18 +85,27 @@ export async function handleOrderCreated(
     // 1. Update customer activity metrics
     // 2. Check for velocity spike events
     // 3. Reset customer inactivity counters
-    await eventComputeQueue.add(
-      'compute-order-created-events',
-      {
+    const queue = getEventComputeQueue();
+    if (queue) {
+      await queue.add(
+        'compute-order-created-events',
+        {
+          workspaceId,
+          orderId: order.id.toString(),
+          orderData: order,
+          webhookType: 'orders/create',
+        },
+        {
+          jobId: `order-created-${workspaceId}-${order.id}-${Date.now()}`,
+        }
+      );
+    } else {
+      logger.warn({
+        correlationId,
         workspaceId,
-        orderId: order.id.toString(),
-        orderData: order,
-        webhookType: 'orders/create',
-      },
-      {
-        jobId: `order-created-${workspaceId}-${order.id}-${Date.now()}`,
-      }
-    );
+        orderId: order.id,
+      }, 'Event computation skipped - Redis not configured');
+    }
 
     logger.info({
       correlationId,
@@ -153,24 +162,33 @@ export async function handleOrderPaid(
     // 1. Update customer lifetime value
     // 2. Check if order resulted from a discount code (learning loop)
     // 3. Update revenue metrics
-    await eventComputeQueue.add(
-      'compute-order-paid-events',
-      {
-        workspaceId,
-        orderId: order.id.toString(),
-        orderData: order,
-        webhookType: 'orders/paid',
-      },
-      {
-        jobId: `order-paid-${workspaceId}-${order.id}-${Date.now()}`,
-      }
-    );
+    const queue = getEventComputeQueue();
+    if (queue) {
+      await queue.add(
+        'compute-order-paid-events',
+        {
+          workspaceId,
+          orderId: order.id.toString(),
+          orderData: order,
+          webhookType: 'orders/paid',
+        },
+        {
+          jobId: `order-paid-${workspaceId}-${order.id}-${Date.now()}`,
+        }
+      );
 
-    logger.info({
-      correlationId,
-      workspaceId,
-      orderId: order.id,
-    }, 'Order paid event computation queued');
+      logger.info({
+        correlationId,
+        workspaceId,
+        orderId: order.id,
+      }, 'Order paid event computation queued');
+    } else {
+      logger.warn({
+        correlationId,
+        workspaceId,
+        orderId: order.id,
+      }, 'Event computation skipped - Redis not configured');
+    }
   } catch (error) {
     logger.error({
       correlationId,

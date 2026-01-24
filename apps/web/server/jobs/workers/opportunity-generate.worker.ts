@@ -8,7 +8,7 @@
 
 import { Job, Worker } from 'bullmq';
 import { prisma } from '../../db/client';
-import { QUEUE_NAMES, redisConnection, defaultWorkerOptions } from '../config';
+import { QUEUE_NAMES, redisConnection, defaultWorkerOptions, isRedisConfigured } from '../config';
 import {
   createWorkerLogger,
   logJobStart,
@@ -52,37 +52,45 @@ interface OpportunityGenerateResult {
 
 const logger = createWorkerLogger('opportunity-generate');
 
-export const opportunityGenerateWorker = new Worker<
-  OpportunityGenerateJobData,
-  OpportunityGenerateResult
->(QUEUE_NAMES.OPPORTUNITY_GENERATE, processOpportunityGenerate, {
-  ...defaultWorkerOptions,
-  connection: redisConnection,
-});
+// Only create worker if Redis is configured
+export const opportunityGenerateWorker = isRedisConfigured() && redisConnection
+  ? new Worker<OpportunityGenerateJobData, OpportunityGenerateResult>(
+      QUEUE_NAMES.OPPORTUNITY_GENERATE,
+      processOpportunityGenerate,
+      {
+        ...defaultWorkerOptions,
+        connection: redisConnection,
+      }
+    )
+  : null;
 
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-opportunityGenerateWorker.on('completed', (job, result) => {
-  logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
-});
+if (opportunityGenerateWorker) {
+  opportunityGenerateWorker.on('completed', (job, result) => {
+    logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
+  });
 
-opportunityGenerateWorker.on('failed', (job, error) => {
-  if (job) {
-    logJobFailed(
-      job.id!,
-      job.name!,
-      error as Error,
-      job.attemptsMade,
-      job.data.workspace_id
-    );
-  }
-});
+  opportunityGenerateWorker.on('failed', (job, error) => {
+    if (job) {
+      logJobFailed(
+        job.id!,
+        job.name!,
+        error as Error,
+        job.attemptsMade,
+        job.data.workspace_id
+      );
+    }
+  });
 
-opportunityGenerateWorker.on('error', (error) => {
-  logger.error({ error: error.message, stack: error.stack }, 'Worker error');
-});
+  opportunityGenerateWorker.on('error', (error) => {
+    logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+  });
+} else {
+  logger.warn('Opportunity generate worker not initialized - Redis not configured');
+}
 
 // ============================================================================
 // JOB PROCESSOR
@@ -422,6 +430,10 @@ function calculatePriority(opportunityType: OpportunityType, events: any[]): Pri
 // ============================================================================
 
 export async function shutdownOpportunityGenerateWorker(): Promise<void> {
+  if (!opportunityGenerateWorker) {
+    logger.debug('Opportunity generate worker not running - nothing to shut down');
+    return;
+  }
   logger.info('Shutting down opportunity generate worker...');
   await opportunityGenerateWorker.close();
   logger.info('Opportunity generate worker shut down');

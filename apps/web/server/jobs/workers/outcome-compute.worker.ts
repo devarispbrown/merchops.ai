@@ -8,7 +8,7 @@
 
 import { Job, Worker } from 'bullmq';
 import { prisma } from '../../db/client';
-import { QUEUE_NAMES, redisConnection, defaultWorkerOptions } from '../config';
+import { QUEUE_NAMES, redisConnection, defaultWorkerOptions, isRedisConfigured } from '../config';
 import {
   createWorkerLogger,
   logJobStart,
@@ -46,38 +46,45 @@ interface OutcomeComputeResult {
 
 const logger = createWorkerLogger('outcome-compute');
 
-export const outcomeComputeWorker = new Worker<OutcomeComputeJobData, OutcomeComputeResult>(
-  QUEUE_NAMES.OUTCOME_COMPUTE,
-  processOutcomeCompute,
-  {
-    ...defaultWorkerOptions,
-    connection: redisConnection,
-  }
-);
+// Only create worker if Redis is configured
+export const outcomeComputeWorker = isRedisConfigured() && redisConnection
+  ? new Worker<OutcomeComputeJobData, OutcomeComputeResult>(
+      QUEUE_NAMES.OUTCOME_COMPUTE,
+      processOutcomeCompute,
+      {
+        ...defaultWorkerOptions,
+        connection: redisConnection,
+      }
+    )
+  : null;
 
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-outcomeComputeWorker.on('completed', (job, result) => {
-  logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
-});
+if (outcomeComputeWorker) {
+  outcomeComputeWorker.on('completed', (job, result) => {
+    logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
+  });
 
-outcomeComputeWorker.on('failed', (job, error) => {
-  if (job) {
-    logJobFailed(
-      job.id!,
-      job.name!,
-      error as Error,
-      job.attemptsMade,
-      job.data.workspace_id
-    );
-  }
-});
+  outcomeComputeWorker.on('failed', (job, error) => {
+    if (job) {
+      logJobFailed(
+        job.id!,
+        job.name!,
+        error as Error,
+        job.attemptsMade,
+        job.data.workspace_id
+      );
+    }
+  });
 
-outcomeComputeWorker.on('error', (error) => {
-  logger.error({ error: error.message, stack: error.stack }, 'Worker error');
-});
+  outcomeComputeWorker.on('error', (error) => {
+    logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+  });
+} else {
+  logger.warn('Outcome compute worker not initialized - Redis not configured');
+}
 
 // ============================================================================
 // JOB PROCESSOR
@@ -227,6 +234,10 @@ async function processOutcomeCompute(
 // ============================================================================
 
 export async function shutdownOutcomeComputeWorker(): Promise<void> {
+  if (!outcomeComputeWorker) {
+    logger.debug('Outcome compute worker not running - nothing to shut down');
+    return;
+  }
   logger.info('Shutting down outcome compute worker...');
   await outcomeComputeWorker.close();
   logger.info('Outcome compute worker shut down');

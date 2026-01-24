@@ -7,14 +7,14 @@
  */
 
 import { Job, Worker } from 'bullmq';
-import { QUEUE_NAMES, redisConnection, defaultWorkerOptions } from '../config';
+import { QUEUE_NAMES, redisConnection, defaultWorkerOptions, isRedisConfigured } from '../config';
 import {
   createWorkerLogger,
   logJobStart,
   logJobComplete,
   logJobFailed,
 } from '../../observability/logger';
-import { opportunityGenerateQueue } from '../queues';
+import { getOpportunityGenerateQueue } from '../queues';
 import {
   computeInventoryThresholdEvents,
   computeOutOfStockEvents,
@@ -59,38 +59,45 @@ interface EventComputeResult {
 
 const logger = createWorkerLogger('event-compute');
 
-export const eventComputeWorker = new Worker<EventComputeJobData, EventComputeResult>(
-  QUEUE_NAMES.EVENT_COMPUTE,
-  processEventCompute,
-  {
-    ...defaultWorkerOptions,
-    connection: redisConnection,
-  }
-);
+// Only create worker if Redis is configured
+export const eventComputeWorker = isRedisConfigured() && redisConnection
+  ? new Worker<EventComputeJobData, EventComputeResult>(
+      QUEUE_NAMES.EVENT_COMPUTE,
+      processEventCompute,
+      {
+        ...defaultWorkerOptions,
+        connection: redisConnection,
+      }
+    )
+  : null;
 
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-eventComputeWorker.on('completed', (job, result) => {
-  logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
-});
+if (eventComputeWorker) {
+  eventComputeWorker.on('completed', (job, result) => {
+    logJobComplete(job.id!, job.name!, result, result.duration_ms, result.workspace_id);
+  });
 
-eventComputeWorker.on('failed', (job, error) => {
-  if (job) {
-    logJobFailed(
-      job.id!,
-      job.name!,
-      error as Error,
-      job.attemptsMade,
-      job.data.workspace_id
-    );
-  }
-});
+  eventComputeWorker.on('failed', (job, error) => {
+    if (job) {
+      logJobFailed(
+        job.id!,
+        job.name!,
+        error as Error,
+        job.attemptsMade,
+        job.data.workspace_id
+      );
+    }
+  });
 
-eventComputeWorker.on('error', (error) => {
-  logger.error({ error: error.message, stack: error.stack }, 'Worker error');
-});
+  eventComputeWorker.on('error', (error) => {
+    logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+  });
+} else {
+  logger.warn('Event compute worker not initialized - Redis not configured');
+}
 
 // ============================================================================
 // JOB PROCESSOR
@@ -177,22 +184,25 @@ async function processEventCompute(
 
     // If events were created, trigger opportunity generation
     if (totalEvents > 0) {
-      await opportunityGenerateQueue.add(
-        'generate-opportunities',
-        {
-          workspace_id,
-          trigger: 'events_computed',
-          correlation_id: job.data.correlation_id,
-        },
-        {
-          priority: 5, // High priority
-        }
-      );
+      const opportunityQueue = getOpportunityGenerateQueue();
+      if (opportunityQueue) {
+        await opportunityQueue.add(
+          'generate-opportunities',
+          {
+            workspace_id,
+            trigger: 'events_computed',
+            correlation_id: job.data.correlation_id,
+          },
+          {
+            priority: 5, // High priority
+          }
+        );
 
-      logger.info(
-        { workspace_id, totalEvents },
-        `Triggered opportunity generation for ${totalEvents} new events`
-      );
+        logger.info(
+          { workspace_id, totalEvents },
+          `Triggered opportunity generation for ${totalEvents} new events`
+        );
+      }
     }
 
     logger.info(
@@ -225,6 +235,10 @@ async function processEventCompute(
 // ============================================================================
 
 export async function shutdownEventComputeWorker(): Promise<void> {
+  if (!eventComputeWorker) {
+    logger.debug('Event compute worker not running - nothing to shut down');
+    return;
+  }
   logger.info('Shutting down event compute worker...');
   await eventComputeWorker.close();
   logger.info('Event compute worker shut down');

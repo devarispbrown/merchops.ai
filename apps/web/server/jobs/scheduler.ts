@@ -5,14 +5,16 @@
  * - Decay check (every hour)
  * - Outcome computation (daily)
  * - Data sync refresh (every 6 hours)
+ *
+ * Gracefully handles environments where Redis is not available.
  */
 
 import { Queue } from 'bullmq';
 import {
-  shopifySyncQueue,
-  eventComputeQueue as _eventComputeQueue,
-  opportunityGenerateQueue,
-  outcomeComputeQueue,
+  getShopifySyncQueue,
+  getOpportunityGenerateQueue,
+  getOutcomeComputeQueue,
+  areQueuesAvailable,
 } from './queues';
 import { SCHEDULER_CONFIG, JOB_PRIORITIES } from './config';
 import { logger } from '../observability/logger';
@@ -26,8 +28,14 @@ const scheduledJobs = new Map<string, { queue: Queue; jobName: string; pattern: 
 
 /**
  * Initialize all scheduled jobs
+ * No-op if Redis is not configured
  */
 export async function initializeScheduler(): Promise<void> {
+  if (!areQueuesAvailable()) {
+    logger.info('Scheduler not initialized - Redis is not configured');
+    return;
+  }
+
   logger.info('Initializing job scheduler...');
 
   try {
@@ -57,7 +65,13 @@ export async function initializeScheduler(): Promise<void> {
 async function scheduleDecayCheck(): Promise<void> {
   const { pattern, jobName } = SCHEDULER_CONFIG.DECAY_CHECK;
 
-  await opportunityGenerateQueue.add(
+  const queue = getOpportunityGenerateQueue();
+  if (!queue) {
+    logger.warn('Cannot schedule decay check - queue unavailable');
+    return;
+  }
+
+  await queue.add(
     jobName,
     injectCorrelationIntoJobData({
       type: 'decay_check',
@@ -73,7 +87,7 @@ async function scheduleDecayCheck(): Promise<void> {
   );
 
   scheduledJobs.set(jobName, {
-    queue: opportunityGenerateQueue,
+    queue,
     jobName,
     pattern,
   });
@@ -91,7 +105,13 @@ async function scheduleDecayCheck(): Promise<void> {
 async function scheduleOutcomeComputation(): Promise<void> {
   const { pattern, jobName } = SCHEDULER_CONFIG.OUTCOME_COMPUTE;
 
-  await outcomeComputeQueue.add(
+  const queue = getOutcomeComputeQueue();
+  if (!queue) {
+    logger.warn('Cannot schedule outcome computation - queue unavailable');
+    return;
+  }
+
+  await queue.add(
     jobName,
     injectCorrelationIntoJobData({
       type: 'scheduled_outcome_compute',
@@ -107,7 +127,7 @@ async function scheduleOutcomeComputation(): Promise<void> {
   );
 
   scheduledJobs.set(jobName, {
-    queue: outcomeComputeQueue,
+    queue,
     jobName,
     pattern,
   });
@@ -125,7 +145,13 @@ async function scheduleOutcomeComputation(): Promise<void> {
 async function scheduleDataSyncRefresh(): Promise<void> {
   const { pattern, jobName } = SCHEDULER_CONFIG.DATA_SYNC;
 
-  await shopifySyncQueue.add(
+  const queue = getShopifySyncQueue();
+  if (!queue) {
+    logger.warn('Cannot schedule data sync refresh - queue unavailable');
+    return;
+  }
+
+  await queue.add(
     jobName,
     injectCorrelationIntoJobData({
       type: 'scheduled_data_sync',
@@ -142,7 +168,7 @@ async function scheduleDataSyncRefresh(): Promise<void> {
   );
 
   scheduledJobs.set(jobName, {
-    queue: shopifySyncQueue,
+    queue,
     jobName,
     pattern,
   });
@@ -189,6 +215,11 @@ export async function removeScheduledJob(jobName: string): Promise<void> {
  * Remove all scheduled jobs
  */
 export async function removeAllScheduledJobs(): Promise<void> {
+  if (scheduledJobs.size === 0) {
+    logger.debug('No scheduled jobs to remove');
+    return;
+  }
+
   logger.info('Removing all scheduled jobs...');
 
   const removePromises = Array.from(scheduledJobs.keys()).map((jobName) =>
@@ -309,6 +340,7 @@ export async function triggerScheduledJob(
  */
 export async function getSchedulerHealth(): Promise<{
   healthy: boolean;
+  redisConfigured: boolean;
   scheduledJobsCount: number;
   jobs: Array<{
     name: string;
@@ -318,6 +350,17 @@ export async function getSchedulerHealth(): Promise<{
     nextRun?: Date;
   }>;
 }> {
+  const redisConfigured = areQueuesAvailable();
+
+  if (!redisConfigured) {
+    return {
+      healthy: true, // Not having Redis is acceptable in some environments
+      redisConfigured: false,
+      scheduledJobsCount: 0,
+      jobs: [],
+    };
+  }
+
   const jobs = [];
   let allHealthy = true;
 
@@ -340,6 +383,7 @@ export async function getSchedulerHealth(): Promise<{
 
   return {
     healthy: allHealthy,
+    redisConfigured: true,
     scheduledJobsCount: scheduledJobs.size,
     jobs,
   };
