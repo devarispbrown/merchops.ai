@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'MerchOps - Calm Store Operations',
   description: 'Intelligent opportunities for your Shopify store, always under your control',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
