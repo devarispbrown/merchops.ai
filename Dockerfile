@@ -74,10 +74,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# Copy Prisma schema and generate client for runtime
+# Copy Prisma schema for migrations (client is included in standalone output)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy standalone Next.js build output
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
