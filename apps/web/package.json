@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "workers": "tsx src/server/jobs/worker.ts"
+    "workers": "tsx server/jobs/worker.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
