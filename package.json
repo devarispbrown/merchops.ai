@@ -13,6 +13,7 @@
     "test:e2e": "pnpm --filter @merchops/web test:e2e",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:validate": "prisma validate",
     "prisma:studio": "prisma studio",
     "workers": "pnpm --filter @merchops/web workers",
