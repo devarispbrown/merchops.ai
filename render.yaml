@@ -9,7 +9,7 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    buildCommand: pnpm install && pnpm prisma:generate && pnpm build
+    buildCommand: pnpm install --frozen-lockfile && npx prisma generate && pnpm build
     startCommand: pnpm start
     healthCheckPath: /api/health
     branch: main
@@ -77,7 +77,7 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    buildCommand: pnpm install && pnpm prisma:generate
+    buildCommand: pnpm install --frozen-lockfile && npx prisma generate
     startCommand: pnpm workers
     branch: main
     autoDeploy: true
