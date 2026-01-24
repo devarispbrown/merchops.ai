@@ -14,6 +14,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:prod": "bash scripts/migrate.sh",
     "prisma:validate": "prisma validate",
     "prisma:studio": "prisma studio",
     "workers": "pnpm --filter @merchops/web workers",

@@ -9,7 +9,7 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build
+    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm prisma:migrate:prod && pnpm build
     startCommand: pnpm start
     healthCheckPath: /api/health
     branch: main
@@ -109,7 +109,7 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm prisma:migrate:deploy
+    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm prisma:migrate:prod
     startCommand: pnpm workers
     branch: main
     autoDeploy: true
