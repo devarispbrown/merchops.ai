@@ -4,8 +4,8 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@merchops/shared'],
-  output: 'standalone',
-  // Server Actions body size limit (serverActions is now stable in Next.js 15+)
+  // Note: standalone output removed due to monorepo path complexity
+  // Use regular next start instead
   images: {
     remotePatterns: [
       {

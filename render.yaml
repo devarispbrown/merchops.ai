@@ -9,8 +9,8 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm build && mkdir -p apps/web/.next/standalone/.next && cp -r apps/web/.next/static apps/web/.next/standalone/.next/static && cp -r apps/web/public apps/web/.next/standalone/public
-    startCommand: node apps/web/.next/standalone/server.js
+    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm build
+    startCommand: pnpm start
     healthCheckPath: /api/health
     branch: main
     autoDeploy: true
