@@ -4,8 +4,9 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@merchops/shared'],
-  // Note: standalone output removed due to monorepo path complexity
-  // Use regular next start instead
+  // Bundle these packages instead of treating them as external
+  // Fixes ioredis resolution warnings with Turbopack
+  serverExternalPackages: [],
   images: {
     remotePatterns: [
       {
