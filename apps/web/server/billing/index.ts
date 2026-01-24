@@ -31,7 +31,7 @@ export type { UsageMetric } from './plans';
 
 // Stripe customer management
 export {
-  stripe,
+  getStripe,
   createStripeCustomer,
   getStripeCustomer,
   updateStripeCustomer,

@@ -15,7 +15,7 @@ import {
   getSubscriptionByStripeId,
   updateSubscription,
 } from './subscription';
-import { stripe } from './customer';
+import { getStripe } from './customer';
 
 /**
  * Log a billing event to the database
@@ -504,7 +504,7 @@ export function verifyWebhookSignature(
   }
 
   try {
-    const event = stripe.webhooks.constructEvent(
+    const event = getStripe().webhooks.constructEvent(
       payload,
       signature,
       webhookSecret

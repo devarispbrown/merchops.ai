@@ -12,19 +12,38 @@ import { ExternalServiceError } from '@/server/observability/error-handler';
 import Stripe from 'stripe';
 
 /**
- * Initialize Stripe client
+ * Lazy-loaded Stripe client
+ * Only initialized when first accessed at runtime to avoid build-time errors
  */
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // @ts-ignore - API version type mismatch
-  apiVersion: '2024-12-18.acacia',
-  typescript: true,
-  appInfo: {
-    name: 'MerchOps',
-    version: '0.1.0',
-  },
-});
+let _stripe: Stripe | null = null;
 
-export { stripe };
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error(
+        'STRIPE_SECRET_KEY environment variable is not configured. ' +
+        'Please set it in your environment variables.'
+      );
+    }
+    _stripe = new Stripe(secretKey, {
+      // @ts-ignore - API version type mismatch
+      apiVersion: '2024-12-18.acacia',
+      typescript: true,
+      appInfo: {
+        name: 'MerchOps',
+        version: '0.1.0',
+      },
+    });
+  }
+  return _stripe;
+}
+
+/**
+ * Get the Stripe client instance
+ * Exported for use in other modules
+ */
+export { getStripe };
 
 /**
  * Create a new Stripe customer
@@ -45,7 +64,7 @@ export async function createStripeCustomer(
       'Creating Stripe customer'
     );
 
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email,
       name,
       metadata: {
@@ -91,7 +110,7 @@ export async function getStripeCustomer(
   customerId: string
 ): Promise<Stripe.Customer | null> {
   try {
-    const customer = await stripe.customers.retrieve(customerId);
+    const customer = await getStripe().customers.retrieve(customerId);
 
     // Customer was deleted
     if (customer.deleted) {
@@ -144,7 +163,7 @@ export async function updateStripeCustomer(
       'Updating Stripe customer'
     );
 
-    const customer = await stripe.customers.update(customerId, params);
+    const customer = await getStripe().customers.update(customerId, params);
 
     logger.info(
       { customerId },
@@ -178,7 +197,7 @@ export async function findStripeCustomerByEmail(
   email: string
 ): Promise<Stripe.Customer | null> {
   try {
-    const customers = await stripe.customers.list({
+    const customers = await getStripe().customers.list({
       email,
       limit: 1,
     });
@@ -220,7 +239,7 @@ export async function deleteStripeCustomer(
       'Deleting Stripe customer'
     );
 
-    const deleted = await stripe.customers.del(customerId);
+    const deleted = await getStripe().customers.del(customerId);
 
     logger.info(
       { customerId },
@@ -267,7 +286,7 @@ export async function createCheckoutSession(
       'Creating Stripe checkout session'
     );
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -328,7 +347,7 @@ export async function createBillingPortalSession(
       'Creating Stripe billing portal session'
     );
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
