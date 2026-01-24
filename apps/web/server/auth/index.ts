@@ -4,7 +4,6 @@
 
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { randomUUID } from "crypto";
 import { prisma } from "../db/client";
 import { getEnabledProviders } from "./providers";
 
@@ -99,7 +98,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Add JWT ID (JTI) for future revocation capability
-        token.jti = randomUUID();
+        token.jti = crypto.randomUUID();
       }
 
       // Update session trigger (e.g., from client-side update)
