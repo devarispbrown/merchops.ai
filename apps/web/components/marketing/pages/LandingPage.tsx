@@ -292,19 +292,127 @@ export function LandingPage() {
             ))}
           </div>
 
-          <div className="mt-12 bg-teal-50 rounded-xl p-6 border border-teal-100">
-            <div className="flex items-start gap-4">
-              <Clock className="w-6 h-6 text-teal-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">
-                  What to expect in your first 30 days
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Week 1: First campaign drafts arrive. Week 2-3: Refine your
-                  voice and preferences. Week 4: Consistent campaign flow, 2-5x
-                  per week. Autopilot available when you&apos;re ready.
-                </p>
+          <div className="mt-12 bg-teal-50 rounded-2xl p-8 border border-teal-100">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-white" />
               </div>
+              <h4 className="font-semibold text-gray-900 text-base">
+                What to expect in your first 30 days
+              </h4>
+            </div>
+
+            {/* Timeline steps */}
+            <div className="flex flex-col md:flex-row md:items-start gap-0 md:gap-0">
+
+              {/* Step 1 */}
+              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
+                {/* Mobile: vertical connector line (right side of icon) */}
+                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
+                    <Mail className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
+                </div>
+                {/* Desktop: circle + horizontal connector */}
+                <div className="hidden md:flex flex-col items-center w-full">
+                  <div className="flex items-center w-full">
+                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
+                      <Mail className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                  </div>
+                </div>
+                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
+                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
+                    Week 1
+                  </span>
+                  <p className="text-sm text-gray-700 font-medium leading-snug">
+                    First campaign drafts arrive
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
+                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
+                </div>
+                <div className="hidden md:flex flex-col items-center w-full">
+                  <div className="flex items-center w-full">
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
+                      <Target className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                  </div>
+                </div>
+                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
+                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
+                    Weeks 2–3
+                  </span>
+                  <p className="text-sm text-gray-700 font-medium leading-snug">
+                    Refine your voice and preferences
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
+                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
+                    <Inbox className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
+                </div>
+                <div className="hidden md:flex flex-col items-center w-full">
+                  <div className="flex items-center w-full">
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
+                      <Inbox className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                  </div>
+                </div>
+                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
+                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
+                    Week 4
+                  </span>
+                  <p className="text-sm text-gray-700 font-medium leading-snug">
+                    Consistent campaign flow, 2–5x per week
+                  </p>
+                </div>
+              </div>
+
+              {/* Final milestone */}
+              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
+                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center shadow-sm z-10 ring-2 ring-teal-200">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="hidden md:flex flex-col items-center w-full">
+                  <div className="flex items-center w-full">
+                    <div className="flex-1 h-0.5 bg-teal-200" />
+                    <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto ring-2 ring-teal-200">
+                      <Zap className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                </div>
+                <div className="md:pt-4 md:px-2 md:text-center">
+                  <span className="inline-block text-xs font-semibold text-teal-700 uppercase tracking-wide mb-1">
+                    Milestone
+                  </span>
+                  <p className="text-sm text-gray-700 font-medium leading-snug">
+                    Autopilot available when you&apos;re ready
+                  </p>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
