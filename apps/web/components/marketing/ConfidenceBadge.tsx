@@ -12,12 +12,18 @@ const badgeStyles: Record<ConfidenceLevel, string> = {
   Red: 'bg-red-100 text-red-800',
 }
 
+const badgeLabels: Record<ConfidenceLevel, string> = {
+  Green: 'Ready to send',
+  Yellow: 'Review suggested',
+  Red: 'Needs review',
+}
+
 export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps) {
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyles[confidence]}`}
     >
-      {confidence}
+      {badgeLabels[confidence]}
     </span>
   )
 }

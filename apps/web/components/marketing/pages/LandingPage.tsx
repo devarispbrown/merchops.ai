@@ -85,7 +85,7 @@ export function LandingPage() {
                 onClick={navigateToSignup}
                 className="px-4 py-2 text-sm font-medium text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors"
               >
-                Join the beta
+                Start free trial
               </button>
             </div>
 
@@ -134,7 +134,7 @@ export function LandingPage() {
                   onClick={navigateToSignup}
                   className="px-4 py-2 text-sm font-medium text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors"
                 >
-                  Join the beta
+                  Start free trial
                 </button>
               </div>
             </div>
@@ -163,7 +163,7 @@ export function LandingPage() {
                   onClick={navigateToSignup}
                   className="px-6 py-3 text-base font-medium text-white bg-teal-500 rounded-xl hover:bg-teal-600 transition-colors"
                 >
-                  Join the beta
+                  Start free trial
                 </button>
                 <button
                   onClick={() => scrollToSection('how-it-works')}
@@ -236,7 +236,46 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works - MOVED UP */}
+      {/* Problem Section */}
+      <section className="py-16 md:py-20 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+            The tools aren&apos;t the problem.
+            <br />
+            <span className="text-gray-500">Execution is.</span>
+          </h2>
+
+          <div className="text-left space-y-6 text-gray-600 leading-relaxed">
+            <p>
+              You already have Shopify Email or Klaviyo. They&apos;re fine. You don&apos;t
+              need more features.
+            </p>
+
+            <p>You need the weekly decisions handled:</p>
+
+            <ul className="space-y-2 pl-4">
+              {[
+                'What should I send this week?',
+                'Who should get it?',
+                'Which products?',
+                "What offer won't kill margin?",
+                'How do I stay on brand?',
+              ].map((item, index) => (
+                <li key={index} className="flex items-center">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-3" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-xl font-semibold text-gray-900 mt-8">
+            Blank calendar = lost revenue.
+          </p>
+        </div>
+      </section>
+
+      {/* How It Works */}
       <section
         id="how-it-works"
         className="py-16 md:py-20 px-4 sm:px-6 bg-white"
@@ -418,45 +457,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Problem Section */}
-      <section className="py-16 md:py-20 px-4 sm:px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            The tools aren&apos;t the problem.
-            <br />
-            <span className="text-gray-500">Execution is.</span>
-          </h2>
-
-          <div className="text-left space-y-6 text-gray-600 leading-relaxed">
-            <p>
-              You already have Shopify Email or Klaviyo. They&apos;re fine. You don&apos;t
-              need more features.
-            </p>
-
-            <p>You need the weekly decisions handled:</p>
-
-            <ul className="space-y-2 pl-4">
-              {[
-                'What should I send this week?',
-                'Who should get it?',
-                'Which products?',
-                "What offer won't kill margin?",
-                'How do I stay on brand?',
-              ].map((item, index) => (
-                <li key={index} className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-3" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="text-xl font-semibold text-gray-900 mt-8">
-            Blank calendar = lost revenue.
-          </p>
-        </div>
-      </section>
-
       {/* Solution Section */}
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-3xl mx-auto">
@@ -467,7 +467,7 @@ export function LandingPage() {
           <div className="space-y-8">
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Promise
+                What we do
               </h3>
               <p className="text-gray-600 leading-relaxed">
                 MerchOps drafts campaigns that match your store, your customers,
@@ -477,7 +477,7 @@ export function LandingPage() {
 
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Picture
+                What it feels like
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 It&apos;s like having a retention merchandiser who shows up every day
@@ -500,7 +500,7 @@ export function LandingPage() {
 
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Proof
+                What you see
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 Every draft includes:
@@ -521,7 +521,7 @@ export function LandingPage() {
             </div>
 
             <div className="bg-teal-50 rounded-2xl p-8 border border-teal-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Push</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">One click to send</h3>
               <p className="text-gray-700 leading-relaxed">
                 You approve in one click. MerchOps schedules through your
                 existing tools.
@@ -671,9 +671,10 @@ export function LandingPage() {
               <ul className="space-y-3">
                 {[
                   'Push campaigns directly to Klaviyo',
-                  'Respects your existing flows',
-                  "Won't interfere with automations",
-                  'Uses your templates and branding',
+                  'Checks flow enrollment before targeting',
+                  'Coordinates frequency caps across campaigns and flows',
+                  'Respects your suppression and compliance lists',
+                  'Uses your saved templates and branding',
                 ].map((item, index) => (
                   <li
                     key={index}
@@ -698,6 +699,20 @@ export function LandingPage() {
                   Your deliverability stays intact. MerchOps pushes campaigns
                   through your existing sender reputation. No new domains, no
                   warmup period.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 bg-slate-50 rounded-xl p-6 border border-slate-200">
+            <div className="flex items-start gap-4">
+              <Shield className="w-6 h-6 text-slate-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">
+                  Your data stays safe
+                </h4>
+                <p className="text-sm text-gray-600">
+                  MerchOps uses read-only Shopify access with minimal scopes. Your data is encrypted at rest, never shared, and fully deleted if you cancel. We never store payment information.
                 </p>
               </div>
             </div>
@@ -808,9 +823,10 @@ export function LandingPage() {
             <PricingCard
               name="Starter"
               price="$49"
+              betaPrice="$25"
               subtitle="Best for stores under $50K/mo"
               features={[
-                'Weekly campaign drafts',
+                'Up to 3 campaign drafts per week',
                 'Draft-only mode',
                 'Shopify Email export',
                 'Email support',
@@ -820,9 +836,10 @@ export function LandingPage() {
             <PricingCard
               name="Growth"
               price="$149"
+              betaPrice="$75"
               subtitle="Best for stores $50K-$500K/mo"
               features={[
-                'Daily campaign inbox',
+                'Daily campaign inbox (up to 5/week)',
                 'Shopify Email + Klaviyo',
                 'Inventory + margin guardrails',
                 'Priority support',
@@ -834,6 +851,7 @@ export function LandingPage() {
             <PricingCard
               name="Pro"
               price="$399"
+              betaPrice="$200"
               subtitle="Best for stores $500K+/mo"
               features={[
                 'Everything in Growth',
@@ -846,9 +864,6 @@ export function LandingPage() {
             />
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-8">
-            Beta pricing: 50% off for the first 3 months for early merchants.
-          </p>
         </div>
       </section>
 
@@ -883,6 +898,14 @@ export function LandingPage() {
             <FAQItem
               question="Can I control discounts and which products get featured?"
               answer='Yes. Set discount ceilings, mark products as "never discount," and exclude specific items or collections. MerchOps respects your rules on every campaign.'
+            />
+            <FAQItem
+              question="How does MerchOps work with my existing Klaviyo flows?"
+              answer="MerchOps checks flow enrollment before targeting any customer. It coordinates frequency caps across your campaigns and automated flows so no one gets double-emailed. Your suppression lists, unsubscribes, and compliance settings are always respected. Campaigns are created as drafts in Klaviyo using your saved templates."
+            />
+            <FAQItem
+              question="What data does MerchOps access, and is it secure?"
+              answer="MerchOps uses read-only Shopify OAuth with minimal scopes to read your catalog, orders, and customer history. All data is encrypted at rest and in transit. We never store payment information or share your data. If you cancel, your data is fully deleted within 30 days."
             />
           </div>
         </div>

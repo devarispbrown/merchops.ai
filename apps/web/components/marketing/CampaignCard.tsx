@@ -1,4 +1,5 @@
 import React from 'react'
+import { ShoppingBag, Shirt, Package } from 'lucide-react'
 
 import { ConfidenceBadge } from './ConfidenceBadge'
 
@@ -44,14 +45,15 @@ export function CampaignCard({
           </div>
         )}
         <div className="flex gap-1.5 my-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"
-            >
-              <div className="w-6 h-6 rounded bg-gray-200" />
-            </div>
-          ))}
+          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-gray-500" />
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+            <Shirt className="w-5 h-5 text-teal-600" />
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+            <Package className="w-5 h-5 text-blue-500" />
+          </div>
         </div>
         <p className="text-xs text-gray-500 italic">&ldquo;{why}&rdquo;</p>
       </div>
