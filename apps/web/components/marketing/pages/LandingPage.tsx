@@ -17,12 +17,16 @@ import {
   Package,
   Mail,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { CampaignCard } from '../CampaignCard'
+import { DraftEditorMock } from '../DraftEditorMock'
 import { FAQItem } from '../FAQItem'
+import { FadeInUp } from '../FadeInUp'
 import { FeatureCard } from '../FeatureCard'
+import { OutcomeMock } from '../OutcomeMock'
 import { PricingCard } from '../PricingCard'
 
 export function LandingPage() {
@@ -81,6 +85,12 @@ export function LandingPage() {
               >
                 FAQ
               </button>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Log in
+              </Link>
               <button
                 onClick={navigateToSignup}
                 className="px-4 py-2 text-sm font-medium text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors"
@@ -130,6 +140,12 @@ export function LandingPage() {
                 >
                   FAQ
                 </button>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-gray-600 hover:text-gray-900 py-2"
+                >
+                  Log in
+                </Link>
                 <button
                   onClick={navigateToSignup}
                   className="px-4 py-2 text-sm font-medium text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors"
@@ -153,9 +169,9 @@ export function LandingPage() {
                 <span className="text-teal-500">Not another dashboard.</span>
               </h1>
               <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                MerchOps turns your Shopify catalog + sales history into
-                winback, discovery, and restock campaigns. You approve. It
-                schedules.
+                MerchOps turns your Shopify data into Klaviyo campaign drafts
+                — winback, discovery, and restock — ready to review and send.
+                You approve. It schedules.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -214,6 +230,11 @@ export function LandingPage() {
                   audienceSize="2,184"
                   offer="Free shipping over $75"
                   why="They've purchased before. They're drifting."
+                  products={[
+                    { name: 'S', color: 'rose' },
+                    { name: 'M', color: 'amber' },
+                    { name: 'L', color: 'orange' },
+                  ]}
                 />
                 <CampaignCard
                   type="Product discovery"
@@ -221,6 +242,11 @@ export function LandingPage() {
                   confidence="Green"
                   audienceSize="1,420"
                   why="Excludes what they already bought."
+                  products={[
+                    { name: 'A', color: 'sky' },
+                    { name: 'B', color: 'violet' },
+                    { name: 'C', color: 'emerald' },
+                  ]}
                 />
                 <CampaignCard
                   type="Restock spotlight"
@@ -229,6 +255,11 @@ export function LandingPage() {
                   audienceSize="860"
                   why="High intent customers + inventory is healthy."
                   showDraftOnly
+                  products={[
+                    { name: 'X', color: 'slate' },
+                    { name: 'Y', color: 'stone' },
+                    { name: 'Z', color: 'zinc' },
+                  ]}
                 />
               </div>
             </div>
@@ -239,11 +270,13 @@ export function LandingPage() {
       {/* Problem Section */}
       <section className="py-16 md:py-20 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            The tools aren&apos;t the problem.
-            <br />
-            <span className="text-gray-500">Execution is.</span>
-          </h2>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+              The tools aren&apos;t the problem.
+              <br />
+              <span className="text-gray-500">Execution is.</span>
+            </h2>
+          </FadeInUp>
 
           <div className="text-left space-y-6 text-gray-600 leading-relaxed">
             <p>
@@ -281,13 +314,15 @@ export function LandingPage() {
         className="py-16 md:py-20 px-4 sm:px-6 bg-white"
       >
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
-            Connect. Review. Send.
-          </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Get your first campaign drafts within 24 hours of connecting your
-            store.
-          </p>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
+              Connect. Review. Send.
+            </h2>
+            <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+              Get your first campaign drafts within 24 hours of connecting your
+              store.
+            </p>
+          </FadeInUp>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -297,6 +332,7 @@ export function LandingPage() {
                 description:
                   'One-click OAuth. MerchOps reads your catalog, orders, and customer history. Setup takes 5 minutes.',
                 icon: ShoppingBag,
+                delay: 0,
               },
               {
                 step: '2',
@@ -304,18 +340,20 @@ export function LandingPage() {
                 description:
                   'Within 24 hours, see your first drafts: winback, discovery, restocks, and promos tailored to your store.',
                 icon: Inbox,
+                delay: 150,
               },
               {
                 step: '3',
                 title: 'Approve and send',
                 description:
-                  'Review each campaign, tweak if needed, then push to Shopify Email or Klaviyo with one click.',
+                  'Review each campaign, tweak if needed, then push directly to Klaviyo as a draft — or export to Shopify Email.',
                 icon: Zap,
+                delay: 300,
               },
             ].map((item) => (
+              <FadeInUp key={item.step} delay={item.delay}>
               <div
-                key={item.step}
-                className="bg-gray-50 rounded-2xl p-8 text-center border border-gray-100"
+                className="bg-gray-50 rounded-2xl p-8 text-center border border-gray-100 hover:border-teal-200 transition-colors duration-200"
               >
                 <div className="w-12 h-12 rounded-full bg-teal-500 text-white flex items-center justify-center text-xl font-bold mx-auto mb-6">
                   {item.step}
@@ -328,141 +366,46 @@ export function LandingPage() {
                   {item.description}
                 </p>
               </div>
+              </FadeInUp>
             ))}
           </div>
 
+          <FadeInUp>
           <div className="mt-12 bg-teal-50 rounded-2xl p-8 border border-teal-100">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900 text-base">
-                What to expect in your first 30 days
-              </h4>
-            </div>
+            <h4 className="font-semibold text-gray-900 text-lg text-center mb-8">
+              What to expect in your first 30 days
+            </h4>
 
-            {/* Timeline steps */}
-            <div className="flex flex-col md:flex-row md:items-start gap-0 md:gap-0">
-
-              {/* Step 1 */}
-              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
-                {/* Mobile: vertical connector line (right side of icon) */}
-                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
-                    <Mail className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
-                </div>
-                {/* Desktop: circle + horizontal connector */}
-                <div className="hidden md:flex flex-col items-center w-full">
-                  <div className="flex items-center w-full">
-                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
-                      <Mail className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                  </div>
-                </div>
-                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
-                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
-                    Week 1
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                { week: 'Week 1', text: 'First campaign drafts arrive', accent: false },
+                { week: 'Weeks 2–3', text: 'Refine your voice and preferences', accent: false },
+                { week: 'Week 4', text: 'Consistent campaign flow, 2–5x per week', accent: false },
+                { week: 'Milestone', text: 'Autopilot available when you\u2019re ready', accent: true },
+              ].map((item) => (
+                <div key={item.week} className="text-center">
+                  <span className={`inline-block text-xs font-semibold uppercase tracking-wide mb-2 ${item.accent ? 'text-teal-700' : 'text-teal-600'}`}>
+                    {item.week}
                   </span>
                   <p className="text-sm text-gray-700 font-medium leading-snug">
-                    First campaign drafts arrive
+                    {item.text}
                   </p>
                 </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
-                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
-                </div>
-                <div className="hidden md:flex flex-col items-center w-full">
-                  <div className="flex items-center w-full">
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
-                      <Target className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                  </div>
-                </div>
-                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
-                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
-                    Weeks 2–3
-                  </span>
-                  <p className="text-sm text-gray-700 font-medium leading-snug">
-                    Refine your voice and preferences
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
-                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10">
-                    <Inbox className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="w-0.5 h-full min-h-8 bg-teal-200 mt-1" />
-                </div>
-                <div className="hidden md:flex flex-col items-center w-full">
-                  <div className="flex items-center w-full">
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto">
-                      <Inbox className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                  </div>
-                </div>
-                <div className="pb-8 md:pb-0 md:pt-4 md:px-2 md:text-center">
-                  <span className="inline-block text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
-                    Week 4
-                  </span>
-                  <p className="text-sm text-gray-700 font-medium leading-snug">
-                    Consistent campaign flow, 2–5x per week
-                  </p>
-                </div>
-              </div>
-
-              {/* Final milestone */}
-              <div className="flex md:flex-col items-start md:items-center flex-1 relative">
-                <div className="flex flex-col items-center md:hidden mr-4 flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center shadow-sm z-10 ring-2 ring-teal-200">
-                    <Zap className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="hidden md:flex flex-col items-center w-full">
-                  <div className="flex items-center w-full">
-                    <div className="flex-1 h-0.5 bg-teal-200" />
-                    <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center shadow-sm z-10 flex-shrink-0 mx-auto ring-2 ring-teal-200">
-                      <Zap className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="md:pt-4 md:px-2 md:text-center">
-                  <span className="inline-block text-xs font-semibold text-teal-700 uppercase tracking-wide mb-1">
-                    Milestone
-                  </span>
-                  <p className="text-sm text-gray-700 font-medium leading-snug">
-                    Autopilot available when you&apos;re ready
-                  </p>
-                </div>
-              </div>
-
+              ))}
             </div>
           </div>
+          </FadeInUp>
         </div>
       </section>
 
       {/* Solution Section */}
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">
-            MerchOps runs the campaign decisions for you.
-          </h2>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">
+              MerchOps runs the campaign decisions for you.
+            </h2>
+          </FadeInUp>
 
           <div className="space-y-8">
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
@@ -505,7 +448,7 @@ export function LandingPage() {
               <p className="text-gray-600 leading-relaxed mb-4">
                 Every draft includes:
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 {[
                   'Audience size',
                   'Product picks + alternates',
@@ -518,6 +461,7 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <DraftEditorMock />
             </div>
 
             <div className="bg-teal-50 rounded-2xl p-8 border border-teal-100">
@@ -531,16 +475,85 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Track What Works Section */}
+      <section className="py-16 md:py-20 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Track what works.
+            </h2>
+            <p className="text-gray-600 max-w-xl mx-auto">
+              Every campaign you approve builds a track record. MerchOps shows
+              you what landed, what missed, and why — so each draft gets better
+              than the last.
+            </p>
+          </div>
+          <OutcomeMock />
+        </div>
+      </section>
+
+      {/* ROI Section */}
+      <section className="py-16 md:py-20 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
+            Time back. Revenue forward.
+          </h2>
+          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            MerchOps handles the decision work so you can spend your time on
+            what only you can do.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              {
+                metric: '2\u20135 hrs',
+                description: 'saved per week on campaign planning',
+              },
+              {
+                metric: '3\u20135x',
+                description: 'more campaigns sent vs. manual',
+              },
+              {
+                metric: '<60 sec',
+                description: 'from opportunity to ready-to-send draft',
+              },
+              {
+                metric: '100%',
+                description: 'of campaigns include why-now reasoning',
+              },
+            ].map((item, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center"
+              >
+                <p className="text-3xl font-bold text-teal-500 mb-2">
+                  {item.metric}
+                </p>
+                <p className="text-sm text-gray-600 leading-snug">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-gray-400 text-center mt-6">
+            Based on typical store activity during beta testing period
+          </p>
+        </div>
+      </section>
+
       {/* Who This Is For - NEW SECTION */}
       <section id="who-its-for" className="py-16 md:py-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
-            Is MerchOps right for you?
-          </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            MerchOps works best for established Shopify stores ready to send
-            consistent campaigns.
-          </p>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
+              Is MerchOps right for you?
+            </h2>
+            <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+              MerchOps works best for established Shopify stores ready to send
+              consistent campaigns.
+            </p>
+          </FadeInUp>
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Good Fit */}
@@ -615,15 +628,49 @@ export function LandingPage() {
       {/* Integration Details - NEW SECTION */}
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
-            Works with your existing tools.
-          </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            MerchOps doesn&apos;t replace Shopify Email or Klaviyo. It makes them
-            easier to use.
-          </p>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
+              Works with your existing tools.
+            </h2>
+            <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+              MerchOps doesn&apos;t replace Shopify Email or Klaviyo. It makes them
+              easier to use.
+            </p>
+          </FadeInUp>
 
           <div className="grid md:grid-cols-2 gap-8">
+            {/* Klaviyo */}
+            <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Klaviyo
+                  </h3>
+                  <p className="text-sm text-gray-500">Full API integration</p>
+                </div>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  'Push campaign drafts directly to Klaviyo',
+                  'Auto-create segments and sync customer lists',
+                  'Trigger your existing Klaviyo flows from opportunities',
+                  'Frequency cap coordination across campaigns',
+                  'Respects your suppression and unsubscribe lists',
+                ].map((item, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center text-sm text-gray-600"
+                  >
+                    <CheckCircle className="w-4 h-4 text-purple-500 mr-2 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             {/* Shopify Email */}
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
               <div className="flex items-center gap-3 mb-6">
@@ -649,38 +696,6 @@ export function LandingPage() {
                     className="flex items-center text-sm text-gray-600"
                   >
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Klaviyo */}
-            <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Klaviyo
-                  </h3>
-                  <p className="text-sm text-gray-500">Full API integration</p>
-                </div>
-              </div>
-              <ul className="space-y-3">
-                {[
-                  'Push campaigns directly to Klaviyo',
-                  'Checks flow enrollment before targeting',
-                  'Coordinates frequency caps across campaigns and flows',
-                  'Respects your suppression and compliance lists',
-                  'Uses your saved templates and branding',
-                ].map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex items-center text-sm text-gray-600"
-                  >
-                    <CheckCircle className="w-4 h-4 text-purple-500 mr-2 flex-shrink-0" />
                     {item}
                   </li>
                 ))}
@@ -723,39 +738,49 @@ export function LandingPage() {
       {/* Differentiation Section - REFRAMED POSITIVELY */}
       <section className="py-16 md:py-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Smarter than templates.
-              <br />
-              <span className="text-teal-500">Safer than autopilot.</span>
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              MerchOps combines merchandising intelligence with audience
-              targeting—so every campaign is relevant, timely, and on-brand.
-            </p>
-          </div>
+          <FadeInUp>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Smarter than templates.
+                <br />
+                <span className="text-teal-500">Safer than autopilot.</span>
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                MerchOps combines merchandising intelligence with audience
+                targeting—so every campaign is relevant, timely, and on-brand.
+              </p>
+            </div>
+          </FadeInUp>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <FeatureCard
-              icon={ShoppingBag}
-              title="Merchandising intelligence"
-              description="Product picks that exclude past purchases, respect inventory levels, and protect your margins."
-            />
-            <FeatureCard
-              icon={Users}
-              title="Clear audience targeting"
-              description="Simple cohorts like VIP, active, lapsing, and winback. No jargon, no complex segments to build."
-            />
-            <FeatureCard
-              icon={Shield}
-              title="Built-in guardrails"
-              description="Frequency caps, exclusions, discount ceilings, and quiet hours—all configured by default."
-            />
-            <FeatureCard
-              icon={MessageSquare}
-              title="Transparent reasoning"
-              description='Every campaign includes a "why this is worth sending" explanation. No black box decisions.'
-            />
+            <FadeInUp delay={0}>
+              <FeatureCard
+                icon={ShoppingBag}
+                title="Merchandising intelligence"
+                description="Product picks that exclude past purchases, respect inventory levels, and protect your margins."
+              />
+            </FadeInUp>
+            <FadeInUp delay={100}>
+              <FeatureCard
+                icon={Users}
+                title="Clear audience targeting"
+                description="Simple cohorts like VIP, active, lapsing, and winback. No jargon, no complex segments to build."
+              />
+            </FadeInUp>
+            <FadeInUp delay={200}>
+              <FeatureCard
+                icon={Shield}
+                title="Built-in guardrails"
+                description="Frequency caps, exclusions, discount ceilings, and quiet hours—all configured by default."
+              />
+            </FadeInUp>
+            <FadeInUp delay={300}>
+              <FeatureCard
+                icon={MessageSquare}
+                title="Transparent reasoning"
+                description='Every campaign includes a "why this is worth sending" explanation. No black box decisions.'
+              />
+            </FadeInUp>
           </div>
         </div>
       </section>
@@ -763,11 +788,13 @@ export function LandingPage() {
       {/* Trust + Guardrails Section - SIMPLIFIED */}
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            Safe by default.
-            <br />
-            <span className="text-teal-500">Calm by design.</span>
-          </h2>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              Safe by default.
+              <br />
+              <span className="text-teal-500">Calm by design.</span>
+            </h2>
+          </FadeInUp>
 
           <p className="text-gray-600 leading-relaxed mb-8 max-w-2xl mx-auto">
             MerchOps starts in draft-only mode. You control frequency, tone, and
@@ -810,58 +837,75 @@ export function LandingPage() {
       {/* Pricing Section - WITH REVENUE BANDS */}
       <section id="pricing" className="py-16 md:py-20 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Pricing that scales with your store.
-            </h2>
-            <p className="text-gray-600">
-              Start with a 14-day free trial. No credit card required.
-            </p>
-          </div>
+          <FadeInUp>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Pricing that scales with your store.
+              </h2>
+              <p className="text-gray-600 mb-2">
+                Start with a 14-day free trial. No credit card required.
+              </p>
+              <p className="text-sm text-amber-600 font-medium">
+                Beta pricing ends soon — lock in 50% off for your first 3 months
+              </p>
+            </div>
+          </FadeInUp>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <PricingCard
-              name="Starter"
-              price="$49"
-              betaPrice="$25"
-              subtitle="Best for stores under $50K/mo"
-              features={[
-                'Up to 3 campaign drafts per week',
-                'Draft-only mode',
-                'Shopify Email export',
-                'Email support',
-              ]}
-              ctaText="Start free trial"
-            />
-            <PricingCard
-              name="Growth"
-              price="$149"
-              betaPrice="$75"
-              subtitle="Best for stores $50K-$500K/mo"
-              features={[
-                'Daily campaign inbox (up to 5/week)',
-                'Shopify Email + Klaviyo',
-                'Inventory + margin guardrails',
-                'Priority support',
-                'Voice customization',
-              ]}
-              highlighted
-              ctaText="Start free trial"
-            />
-            <PricingCard
-              name="Pro"
-              price="$399"
-              betaPrice="$200"
-              subtitle="Best for stores $500K+/mo"
-              features={[
-                'Everything in Growth',
-                'Autopilot scheduling',
-                'Advanced cohorts + A/B testing',
-                'Dedicated onboarding',
-                'Custom integrations',
-              ]}
-              ctaText="Start free trial"
-            />
+            <FadeInUp delay={0}>
+              <PricingCard
+                name="Starter"
+                price="$49"
+                betaPrice="$25"
+                subtitle="Best for stores under $50K/mo"
+                features={[
+                  'Up to 3 campaign drafts per week',
+                  'Draft-only mode',
+                  'Shopify Email export',
+                  'Email support',
+                ]}
+                ctaText="Start free trial"
+                urgencyNote="Limited beta spots available"
+                roiAnchor="One recovered customer pays for itself"
+              />
+            </FadeInUp>
+            <FadeInUp delay={100}>
+              <PricingCard
+                name="Growth"
+                price="$149"
+                betaPrice="$75"
+                subtitle="Best for stores $50K-$500K/mo"
+                features={[
+                  'Daily campaign inbox (up to 5/week)',
+                  'Shopify Email + Klaviyo',
+                  'Inventory + margin guardrails',
+                  'Priority support',
+                  'Voice customization',
+                ]}
+                highlighted
+                ctaText="Start free trial"
+                urgencyNote="Limited beta spots available"
+                roiAnchor="Less than one hour of agency time per month"
+              />
+            </FadeInUp>
+            <FadeInUp delay={200}>
+              <PricingCard
+                name="Pro"
+                price="$399"
+                betaPrice="$200"
+                subtitle="Best for stores $500K+/mo"
+                features={[
+                  'Everything in Growth',
+                  'Autopilot scheduling',
+                  'Advanced cohorts + A/B testing',
+                  'Dedicated onboarding',
+                  'Custom integrations',
+                ]}
+                ctaText="Start free trial"
+                urgencyNote="Limited beta spots available"
+                roiAnchor="Replaces $2,000+/mo in retention marketing labor"
+              />
+            </FadeInUp>
           </div>
 
         </div>
@@ -870,9 +914,11 @@ export function LandingPage() {
       {/* FAQ Section - UPDATED */}
       <section id="faq" className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center">
-            FAQ
-          </h2>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center">
+              FAQ
+            </h2>
+          </FadeInUp>
 
           <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 md:p-8">
             <FAQItem
@@ -901,7 +947,15 @@ export function LandingPage() {
             />
             <FAQItem
               question="How does MerchOps work with my existing Klaviyo flows?"
-              answer="MerchOps checks flow enrollment before targeting any customer. It coordinates frequency caps across your campaigns and automated flows so no one gets double-emailed. Your suppression lists, unsubscribes, and compliance settings are always respected. Campaigns are created as drafts in Klaviyo using your saved templates."
+              answer="MerchOps coordinates with Klaviyo in three ways: it creates campaign drafts directly in Klaviyo with AI-generated copy matched to your brand voice, it can trigger your existing flows by enrolling the right customer profiles, and it checks frequency caps so customers aren't double-emailed. Your suppression lists and unsubscribes are always respected."
+            />
+            <FAQItem
+              question="Can MerchOps create segments in Klaviyo?"
+              answer="Yes. When MerchOps detects an opportunity — like a win-back cohort of customers dormant for 60+ days — it automatically creates a synced list in Klaviyo with those profiles. You can use these lists in your own campaigns and flows too."
+            />
+            <FAQItem
+              question="Can MerchOps trigger my existing Klaviyo flows?"
+              answer="Yes. Instead of creating a new campaign, you can choose to trigger an existing Klaviyo flow from any MerchOps opportunity. MerchOps creates the events that your flow listens for, enrolling the right customer profiles automatically."
             />
             <FAQItem
               question="What data does MerchOps access, and is it secure?"
@@ -914,12 +968,14 @@ export function LandingPage() {
       {/* Final CTA Section - WITH RISK REVERSAL */}
       <section id="cta" className="py-16 md:py-24 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            Stop staring at a blank campaign calendar.
-          </h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Connect your store. Get campaigns ready to send. Stay on brand.
-          </p>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              Stop staring at a blank campaign calendar.
+            </h2>
+            <p className="text-lg text-gray-600 mb-8">
+              Connect your store. Get campaigns ready to send. Stay on brand.
+            </p>
+          </FadeInUp>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <button
@@ -969,18 +1025,18 @@ export function LandingPage() {
             </span>
 
             <div className="flex items-center gap-6">
-              <button className="text-sm text-gray-500 hover:text-gray-700">
+              <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-700">
                 Privacy
-              </button>
-              <button className="text-sm text-gray-500 hover:text-gray-700">
+              </Link>
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-700">
                 Terms
-              </button>
-              <button className="text-sm text-gray-500 hover:text-gray-700">
+              </Link>
+              <a href="mailto:hello@merchops.ai" className="text-sm text-gray-500 hover:text-gray-700">
                 Contact
-              </button>
+              </a>
             </div>
 
-            <p className="text-sm text-gray-400">© MerchOps.ai</p>
+            <p className="text-sm text-gray-400">© 2026 MerchOps.ai</p>
           </div>
         </div>
       </footer>

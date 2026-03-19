@@ -11,6 +11,8 @@ type PricingCardProps = {
   features: string[]
   highlighted?: boolean
   ctaText: string
+  roiAnchor?: string
+  urgencyNote?: string
 }
 
 export function PricingCard({
@@ -22,10 +24,12 @@ export function PricingCard({
   features,
   highlighted = false,
   ctaText,
+  roiAnchor,
+  urgencyNote,
 }: PricingCardProps) {
   return (
     <div
-      className={`bg-white rounded-2xl shadow-md p-8 flex flex-col ${highlighted ? 'border-2 border-teal-500 ring-4 ring-teal-50' : 'border border-gray-100'}`}
+      className={`bg-white rounded-2xl shadow-md p-8 flex flex-col ${highlighted ? 'border-2 border-teal-500 ring-4 ring-teal-50 hover:shadow-xl transition-all duration-200' : 'border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200'}`}
     >
       {highlighted && (
         <span className="inline-flex self-start px-3 py-1 text-xs font-semibold text-teal-700 bg-teal-100 rounded-full mb-4">
@@ -38,6 +42,9 @@ export function PricingCard({
         <span className="inline-flex self-start px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full mb-2">
           Beta: 50% off for 3 months
         </span>
+      )}
+      {urgencyNote && (
+        <p className="text-xs text-amber-600 font-medium mb-2">{urgencyNote}</p>
       )}
       <div className="flex items-baseline gap-2 mb-1">
         {betaPrice ? (
@@ -57,6 +64,9 @@ export function PricingCard({
         <p className="text-xs text-gray-400 mb-4">then {price}{period} after</p>
       )}
       {!betaPrice && <div className="mb-6" />}
+      {roiAnchor && (
+        <p className="text-xs text-gray-500 italic mb-6 -mt-2">{roiAnchor}</p>
+      )}
       <ul className="space-y-3 mb-8 flex-1">
         {features.map((feature, index) => (
           <li key={index} className="flex items-start text-sm text-gray-600">
