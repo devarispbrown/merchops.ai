@@ -1,9 +1,10 @@
 /**
  * MerchOps Discount Execution
- * Creates Shopify price rules and discount codes
+ * Creates Shopify price rules and discount codes via the real Shopify Admin API.
  */
 
 import { DiscountDraftPayload, ExecutionErrorCode, ExecutionError } from "../types";
+import { ShopifyClient, ShopifyApiError } from "../../shopify/client";
 
 // ============================================================================
 // TYPES
@@ -30,14 +31,12 @@ export async function executeDiscount(
   const { workspaceId, payload } = input;
 
   try {
-    // Get Shopify connection
-    const shopifyClient = await getShopifyClient(workspaceId);
+    const client = await buildShopifyClient(workspaceId);
 
-    // Create price rule
-    const priceRule = await createPriceRule(shopifyClient, payload);
+    const priceRule = await createPriceRule(client, payload);
+    const priceRuleId = priceRule.id as number;
 
-    // Create discount code
-    const discountCode = await createDiscountCode(shopifyClient, priceRule.id, payload);
+    const discountCode = await createDiscountCode(client, priceRuleId, payload);
 
     return {
       success: true,
@@ -62,10 +61,7 @@ export async function executeDiscount(
 // SHOPIFY API INTEGRATION
 // ============================================================================
 
-async function getShopifyClient(workspaceId: string): Promise<any> {
-  // TODO: Get Shopify connection and create authenticated client
-  // For now, return a mock client for type checking
-
+async function buildShopifyClient(workspaceId: string): Promise<ShopifyClient> {
   const { db } = await import("../../db");
 
   const connection = await db.shopifyConnection.findFirst({
@@ -79,85 +75,68 @@ async function getShopifyClient(workspaceId: string): Promise<any> {
     throw new Error("No active Shopify connection found");
   }
 
-  // TODO: Initialize Shopify API client with access token
-  // const shopify = new Shopify.Clients.Rest(
-  //   connection.store_domain,
-  //   decryptToken(connection.access_token_encrypted)
-  // );
-
-  return {
-    storeDomain: connection.store_domain,
-    // Add other client methods
-  };
+  // ShopifyClient decrypts the token internally via decryptToken()
+  return new ShopifyClient(connection.store_domain, connection.access_token_encrypted);
 }
 
-async function createPriceRule(_client: any, payload: DiscountDraftPayload): Promise<any> {
-  // Map our payload to Shopify's price rule format
-  const priceRuleData = {
+async function createPriceRule(
+  client: ShopifyClient,
+  payload: DiscountDraftPayload
+): Promise<Record<string, unknown>> {
+  const priceRuleBody: Record<string, unknown> = {
     title: payload.title,
     target_type: mapTargetType(payload.target_type),
     target_selection: payload.target_ids && payload.target_ids.length > 0 ? "entitled" : "all",
     allocation_method: "across",
     value_type: payload.discount_type === "percentage" ? "percentage" : "fixed_amount",
-    value: payload.discount_type === "percentage" ? `-${payload.value}` : `-${payload.value * 100}`,
+    // Shopify expects negative values for discounts; fixed_amount is in cents
+    value:
+      payload.discount_type === "percentage"
+        ? `-${payload.value}`
+        : `-${(payload.value * 100).toFixed(2)}`,
     customer_selection: payload.customer_segment ? "prerequisite" : "all",
     starts_at: payload.starts_at,
-    ends_at: payload.ends_at,
-    usage_limit: payload.usage_limit,
-    prerequisite_subtotal_range: payload.minimum_purchase_amount
-      ? {
-          greater_than_or_equal_to: payload.minimum_purchase_amount.toString(),
-        }
-      : undefined,
   };
 
-  // TODO: Make actual Shopify API call
-  // const response = await client.post({
-  //   path: 'price_rules',
-  //   data: { price_rule: priceRuleData },
-  // });
+  if (payload.ends_at) {
+    priceRuleBody.ends_at = payload.ends_at;
+  }
 
-  // Mock response for now
-  console.log("[EXECUTE] Creating Shopify price rule:", priceRuleData);
+  if (payload.usage_limit != null) {
+    priceRuleBody.usage_limit = payload.usage_limit;
+  }
 
-  return {
-    id: `price_rule_${Date.now()}`,
-    ...priceRuleData,
-    created_at: new Date().toISOString(),
-  };
+  if (payload.minimum_purchase_amount != null && payload.minimum_purchase_amount > 0) {
+    priceRuleBody.prerequisite_subtotal_range = {
+      greater_than_or_equal_to: payload.minimum_purchase_amount.toString(),
+    };
+  }
+
+  if (payload.target_ids && payload.target_ids.length > 0) {
+    if (payload.target_type === "product") {
+      priceRuleBody.entitled_product_ids = payload.target_ids;
+    } else if (payload.target_type === "collection") {
+      priceRuleBody.entitled_collection_ids = payload.target_ids;
+    }
+  }
+
+  const response = await client.createPriceRule(priceRuleBody);
+  return response.price_rule;
 }
 
 async function createDiscountCode(
-  _client: any,
-  priceRuleId: string,
+  client: ShopifyClient,
+  priceRuleId: number,
   payload: DiscountDraftPayload
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const code = payload.code || generateDiscountCode();
 
-  const discountCodeData = {
-    code,
-    usage_count: 0,
-  };
-
-  // TODO: Make actual Shopify API call
-  // const response = await client.post({
-  //   path: `price_rules/${priceRuleId}/discount_codes`,
-  //   data: { discount_code: discountCodeData },
-  // });
-
-  // Mock response for now
-  console.log("[EXECUTE] Creating Shopify discount code:", discountCodeData);
-
-  return {
-    id: `discount_code_${Date.now()}`,
-    price_rule_id: priceRuleId,
-    ...discountCodeData,
-    created_at: new Date().toISOString(),
-  };
+  const response = await client.createDiscountCode(priceRuleId, { code });
+  return response.discount_code;
 }
 
 // ============================================================================
-// ROLLBACK
+// ROLLBACK / DISABLE
 // ============================================================================
 
 export async function rollbackDiscount(params: {
@@ -166,24 +145,27 @@ export async function rollbackDiscount(params: {
 }): Promise<void> {
   const { workspaceId, providerResponse } = params;
 
+  const priceRuleId = providerResponse?.priceRule?.id as number | undefined;
+
+  if (!priceRuleId) {
+    console.warn("[ROLLBACK] No price rule ID found in provider response");
+    return;
+  }
+
+  const client = await buildShopifyClient(workspaceId);
+  await disableDiscount(client, priceRuleId);
+}
+
+/**
+ * Deletes a Shopify price rule, which removes all associated discount codes.
+ * This is the canonical rollback / disable mechanism for discount executions.
+ */
+async function disableDiscount(client: ShopifyClient, priceRuleId: number): Promise<void> {
   try {
-    const _shopifyClient = await getShopifyClient(workspaceId);
-    const priceRuleId = providerResponse.priceRule?.id;
-
-    if (!priceRuleId) {
-      console.warn("[ROLLBACK] No price rule ID found in provider response");
-      return;
-    }
-
-    // Delete or disable the price rule
-    // TODO: Make actual Shopify API call
-    // await client.delete({
-    //   path: `price_rules/${priceRuleId}`,
-    // });
-
+    await client.deletePriceRule(priceRuleId);
     console.log("[ROLLBACK] Deleted Shopify price rule:", priceRuleId);
   } catch (error) {
-    console.error("[ROLLBACK] Failed to rollback discount:", error);
+    console.error("[ROLLBACK] Failed to delete price rule:", priceRuleId, error);
     throw error;
   }
 }
@@ -208,7 +190,9 @@ function generateDiscountCode(): string {
 }
 
 function classifyError(error: any): ExecutionError {
-  // Network errors
+  // Network / connectivity errors (raw Node.js codes) — check before API errors
+  // because the ShopifyClient surfaces these wrapped, but raw errors can also
+  // propagate if the mock or an early code path throws them directly.
   if (error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
     return {
       code: ExecutionErrorCode.NETWORK_ERROR,
@@ -218,43 +202,96 @@ function classifyError(error: any): ExecutionError {
     };
   }
 
-  // Authentication errors
-  if (error.response?.status === 401) {
-    return {
-      code: ExecutionErrorCode.INVALID_TOKEN,
-      message: "Shopify access token is invalid or expired",
-      retryable: false,
-      details: { status: error.response.status },
-    };
-  }
+  // Structured ShopifyApiError (from our client) — identified by name for
+  // testability, since instanceof checks fail across module mock boundaries.
+  if (error instanceof ShopifyApiError || error.name === "ShopifyApiError") {
+    // Rate limiting
+    if (error.statusCode === 429) {
+      return {
+        code: ExecutionErrorCode.RATE_LIMIT_EXCEEDED,
+        message: "Shopify API rate limit exceeded",
+        retryable: true,
+        details: { correlationId: error.correlationId, responseBody: error.responseBody },
+      };
+    }
 
-  // Rate limiting
-  if (error.response?.status === 429) {
+    // Authentication
+    if (error.statusCode === 401) {
+      return {
+        code: ExecutionErrorCode.INVALID_TOKEN,
+        message: "Shopify access token is invalid or expired",
+        retryable: false,
+        details: { statusCode: error.statusCode, correlationId: error.correlationId },
+      };
+    }
+
+    // Not found
+    if (error.statusCode === 404) {
+      return {
+        code: ExecutionErrorCode.SHOPIFY_API_ERROR,
+        message: "Shopify resource not found",
+        retryable: false,
+        details: { statusCode: error.statusCode, responseBody: error.responseBody },
+      };
+    }
+
+    // Validation / business logic errors
+    if (error.statusCode === 422) {
+      return {
+        code: ExecutionErrorCode.INVALID_PAYLOAD,
+        message:
+          extractShopifyErrorMessage(error.responseBody) || "Invalid discount configuration",
+        retryable: false,
+        details: { statusCode: error.statusCode, responseBody: error.responseBody },
+      };
+    }
+
+    // Generic Shopify API error (5xx are retried internally by the client;
+    // if they exhaust retries the error surfaces here as non-retryable)
     return {
-      code: ExecutionErrorCode.RATE_LIMIT_EXCEEDED,
-      message: "Shopify API rate limit exceeded",
-      retryable: true,
+      code: ExecutionErrorCode.SHOPIFY_API_ERROR,
+      message: error.message || "Unknown Shopify API error",
+      retryable: false,
       details: {
-        retryAfter: error.response.headers["retry-after"],
+        statusCode: error.statusCode,
+        correlationId: error.correlationId,
+        responseBody: error.responseBody,
       },
     };
   }
 
-  // Business logic errors
-  if (error.response?.status === 422) {
-    return {
-      code: ExecutionErrorCode.INVALID_PAYLOAD,
-      message: error.response.data?.errors || "Invalid discount configuration",
-      retryable: false,
-      details: error.response.data,
-    };
-  }
-
-  // Default
+  // Fallback for unexpected error shapes
   return {
     code: ExecutionErrorCode.SHOPIFY_API_ERROR,
     message: error.message || "Unknown Shopify API error",
     retryable: false,
-    details: { originalError: error },
+    details: { originalError: String(error) },
   };
+}
+
+function extractShopifyErrorMessage(responseBody: unknown): string | null {
+  if (!responseBody || typeof responseBody !== "object") {
+    return null;
+  }
+
+  const body = responseBody as Record<string, unknown>;
+
+  // Shopify surfaces errors as { errors: { field: ["message"] } } or { errors: "string" }
+  if (typeof body.errors === "string") {
+    return body.errors;
+  }
+
+  if (body.errors && typeof body.errors === "object") {
+    const errors = body.errors as Record<string, unknown>;
+    const messages = Object.entries(errors)
+      .flatMap(([field, msgs]) => {
+        if (Array.isArray(msgs)) {
+          return msgs.map((m) => `${field}: ${m}`);
+        }
+        return [`${field}: ${msgs}`];
+      });
+    return messages.join("; ") || null;
+  }
+
+  return null;
 }

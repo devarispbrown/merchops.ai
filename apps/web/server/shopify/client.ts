@@ -386,4 +386,47 @@ export class ShopifyClient {
       { correlationId }
     );
   }
+
+  /**
+   * Create a price rule
+   * POST /admin/api/2024-01/price_rules.json
+   */
+  async createPriceRule(
+    priceRule: Record<string, unknown>,
+    correlationId?: string
+  ): Promise<{ price_rule: Record<string, unknown> }> {
+    return this.request<{ price_rule: Record<string, unknown> }>(
+      '/price_rules.json',
+      { method: 'POST', body: { price_rule: priceRule }, correlationId }
+    );
+  }
+
+  /**
+   * Create a discount code under a price rule
+   * POST /admin/api/2024-01/price_rules/{id}/discount_codes.json
+   */
+  async createDiscountCode(
+    priceRuleId: number,
+    discountCode: Record<string, unknown>,
+    correlationId?: string
+  ): Promise<{ discount_code: Record<string, unknown> }> {
+    return this.request<{ discount_code: Record<string, unknown> }>(
+      `/price_rules/${priceRuleId}/discount_codes.json`,
+      { method: 'POST', body: { discount_code: discountCode }, correlationId }
+    );
+  }
+
+  /**
+   * Delete a price rule (and all its discount codes)
+   * DELETE /admin/api/2024-01/price_rules/{id}.json
+   */
+  async deletePriceRule(
+    priceRuleId: number,
+    correlationId?: string
+  ): Promise<void> {
+    await this.request<unknown>(
+      `/price_rules/${priceRuleId}.json`,
+      { method: 'DELETE', correlationId }
+    );
+  }
 }

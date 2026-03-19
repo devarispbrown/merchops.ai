@@ -15,6 +15,7 @@ import {
   logJobComplete,
   logJobFailed,
 } from '../../observability/logger';
+import { captureJobError } from '../../observability/sentry';
 import { ExecutionType } from '../../actions/types';
 import { resolveDiscountOutcome } from '../../learning/outcomes/resolvers/discount';
 import { resolveWinbackOutcome } from '../../learning/outcomes/resolvers/winback';
@@ -76,11 +77,13 @@ if (outcomeComputeWorker) {
         job.attemptsMade,
         job.data.workspace_id
       );
+      captureJobError(error as Error, job.name!, job.id!, job.data, job.attemptsMade);
     }
   });
 
   outcomeComputeWorker.on('error', (error) => {
     logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+    captureJobError(error, 'outcome-compute-worker', 'unknown', {}, 0);
   });
 } else {
   logger.warn('Outcome compute worker not initialized - Redis not configured');

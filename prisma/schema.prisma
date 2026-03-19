@@ -70,6 +70,9 @@ enum ExecutionType {
   discount_draft
   winback_email_draft
   pause_product
+  klaviyo_segment_sync
+  klaviyo_campaign_draft
+  klaviyo_flow_trigger
 }
 
 enum ShopifyConnectionStatus {
@@ -148,6 +151,8 @@ model Workspace {
   executions          Execution[]
   ai_generations      AiGeneration[]
   subscription        Subscription?
+  confidence_scores   ConfidenceScore[]
+  klaviyo_connection  KlaviyoConnection?
 
   @@index([created_at])
 }
@@ -179,6 +184,8 @@ model ShopifyConnection {
   status                 ShopifyConnectionStatus @default(active)
   installed_at           DateTime                @default(now())
   revoked_at             DateTime?
+  sync_state             String?                 @map("sync_state") // "idle" | "syncing" | "completed" | "failed"
+  last_synced_at         DateTime?               @map("last_synced_at")
 
   // Relations
   workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
@@ -350,6 +357,21 @@ model Outcome {
   @@index([computed_at])
 }
 
+model ConfidenceScore {
+  id              String   @id @default(uuid())
+  workspace_id    String   @map("workspace_id")
+  operator_intent String   @map("operator_intent") // e.g., "reduce_inventory_risk", "reengage_dormant_customers", "protect_margin"
+  score           Float    // 0-100
+  trend           String   // "improving", "stable", "declining"
+  sample_size     Int      @map("sample_size")
+  computed_at     DateTime @default(now()) @map("computed_at")
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@map("confidence_scores")
+  @@index([workspace_id, operator_intent, computed_at])
+}
+
 // ============================================================================
 // AI AUDIT
 // ============================================================================
@@ -371,6 +393,24 @@ model AiGeneration {
   @@index([workspace_id, prompt_version])
   @@index([created_at])
   @@index([model])
+}
+
+// ============================================================================
+// KLAVIYO INTEGRATION
+// ============================================================================
+
+model KlaviyoConnection {
+  id                String    @id @default(uuid())
+  workspaceId       String    @unique @map("workspace_id")
+  apiKeyEncrypted   String    @map("api_key_encrypted")
+  status            String    @default("active") // active, revoked, invalid
+  connectedAt       DateTime  @default(now()) @map("connected_at")
+  revokedAt         DateTime? @map("revoked_at")
+  lastSyncedAt      DateTime? @map("last_synced_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("klaviyo_connections")
 }
 
 // ============================================================================

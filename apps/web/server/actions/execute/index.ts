@@ -10,6 +10,7 @@ import { ExecutionType, ExecutionErrorCode } from '../types';
 import { executeDiscount, rollbackDiscount } from './discount';
 import { executePauseProduct, rollbackPauseProduct } from './pause-product';
 import { executeEmail, rollbackEmail } from './email';
+import { executeKlaviyoFlowTrigger } from './klaviyo-flow';
 import { logger } from '../../observability/logger';
 import { db } from '../../db';
 
@@ -222,6 +223,9 @@ async function callExecutor(params: {
     case ExecutionType.PAUSE_PRODUCT:
       return await executePauseProduct({ workspaceId, payload });
 
+    case ExecutionType.KLAVIYO_FLOW_TRIGGER:
+      return await executeKlaviyoFlowTrigger({ workspaceId, payload });
+
     default:
       logger.error({
         executionType,
@@ -351,6 +355,7 @@ export {
   executeDiscount,
   executePauseProduct,
   executeEmail,
+  executeKlaviyoFlowTrigger,
   rollbackDiscount,
   rollbackPauseProduct,
   rollbackEmail,

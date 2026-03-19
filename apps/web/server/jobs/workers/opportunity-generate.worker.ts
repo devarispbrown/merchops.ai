@@ -15,6 +15,7 @@ import {
   logJobComplete,
   logJobFailed,
 } from '../../observability/logger';
+import { captureJobError } from '../../observability/sentry';
 import {
   OpportunityType,
   PriorityBucket,
@@ -82,11 +83,13 @@ if (opportunityGenerateWorker) {
         job.attemptsMade,
         job.data.workspace_id
       );
+      captureJobError(error as Error, job.name!, job.id!, job.data, job.attemptsMade);
     }
   });
 
   opportunityGenerateWorker.on('error', (error) => {
     logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+    captureJobError(error, 'opportunity-generate-worker', 'unknown', {}, 0);
   });
 } else {
   logger.warn('Opportunity generate worker not initialized - Redis not configured');

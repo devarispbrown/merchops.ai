@@ -13,6 +13,21 @@ import {
   PauseProductPayload,
   getEditableFields,
 } from "../types";
+import { generateAndLog } from "../../ai/generate";
+import {
+  discountCopyPrompt,
+  winbackEmailPrompt,
+  opportunityRationalePrompt,
+  type DiscountCopyInput,
+  type WinbackEmailInput,
+  type OpportunityRationaleInput,
+  type DiscountCopyOutput,
+  type WinbackEmailOutput,
+  type OpportunityRationaleOutput,
+  type PromptInput,
+  type PromptOutput,
+  type PromptTemplate,
+} from "@merchops/shared/prompts";
 
 // ============================================================================
 // TYPES
@@ -93,6 +108,29 @@ export async function createDraftForOpportunity(
 }
 
 // ============================================================================
+// AI COPY HELPER
+// ============================================================================
+
+/**
+ * Calls the AI provider with a given prompt template and inputs.
+ * Validates output fields via the prompt's required schema list.
+ * Falls back to the prompt's deterministic fallbackGenerator on any error.
+ * Logs every attempt (including fallbacks) to the ai_generations audit table.
+ */
+export async function generateAICopy<
+  TInput extends PromptInput,
+  TOutput extends PromptOutput,
+>(
+  promptTemplate: PromptTemplate<TInput, TOutput>,
+  inputs: TInput,
+  workspaceId: string
+): Promise<TOutput> {
+  // generateAndLog handles AI call, Zod-style field validation, fallback on
+  // failure, and audit logging — all in one call.
+  return generateAndLog(promptTemplate, { ...inputs, workspaceId }, prisma);
+}
+
+// ============================================================================
 // PAYLOAD GENERATORS
 // ============================================================================
 
@@ -145,7 +183,7 @@ async function generateDiscountPayload(params: {
   context: Record<string, any>;
   workspaceId: string;
 }): Promise<DiscountDraftPayload> {
-  const { opportunity, context } = params;
+  const { opportunity, context, workspaceId } = params;
 
   // Extract product IDs from opportunity events
   const productIds = extractProductIdsFromEvents(opportunity.event_links);
@@ -155,17 +193,39 @@ async function generateDiscountPayload(params: {
   const startsAt = new Date().toISOString();
   const endsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
 
-  // Try AI generation for title, with fallback
-  let title: string;
-  try {
-    title = await generateDiscountTitle(params);
-  } catch (error) {
-    console.error("AI title generation failed, using fallback", error);
-    title = generateFallbackDiscountTitle(opportunity.type);
-  }
+  // Build AI inputs for discount-copy-v1
+  const productName =
+    context.productName ||
+    extractProductNameFromEvents(opportunity.event_links) ||
+    opportunity.type;
+
+  const discountInputs: DiscountCopyInput = {
+    workspaceId,
+    productName,
+    discountPercent: discountValue,
+    urgencyLevel: resolveUrgencyLevel(context),
+    storeName: context.storeName,
+    inventoryRemaining: context.inventoryLevel,
+    expiryDate: endsAt,
+    context: opportunity.rationale || undefined,
+  };
+
+  const aiCopy = await generateAICopy<DiscountCopyInput, DiscountCopyOutput>(
+    discountCopyPrompt,
+    discountInputs,
+    workspaceId
+  );
+
+  // Enhance the opportunity rationale fields using opportunity-rationale-v1
+  await enhanceOpportunityRationale({
+    opportunity,
+    operatorIntent: params.operatorIntent,
+    context,
+    workspaceId,
+  });
 
   return {
-    title,
+    title: aiCopy.subject_line,
     discount_type: "percentage",
     value: discountValue,
     target_type: productIds.length > 0 ? "product" : "entire_order",
@@ -197,20 +257,41 @@ async function generateWinbackEmailPayload(params: {
   const fromEmail = context.fromEmail || `hello@${workspace?.name.toLowerCase()}.com`;
   const fromName = workspace?.name || "Your Store";
 
-  // Try AI generation for email copy, with fallback
-  let emailCopy: { subject: string; body_html: string; body_text: string; preview_text: string };
-  try {
-    emailCopy = await generateEmailCopy(params);
-  } catch (error) {
-    console.error("AI email generation failed, using fallback", error);
-    emailCopy = generateFallbackEmailCopy(opportunity.type);
-  }
+  // Derive sensible defaults from opportunity context
+  const lastPurchaseDate =
+    context.lastPurchaseDate || new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+  const daysSinceLastPurchase = context.daysSinceLastPurchase || 45;
+
+  const winbackInputs: WinbackEmailInput = {
+    workspaceId,
+    customerName: context.customerName,
+    lastPurchaseDate,
+    daysSinceLastPurchase,
+    recommendedProducts: context.recommendedProducts,
+    storeName: fromName,
+    previousPurchaseCategory: context.previousPurchaseCategory,
+    incentivePercent: context.incentivePercent,
+  };
+
+  const aiCopy = await generateAICopy<WinbackEmailInput, WinbackEmailOutput>(
+    winbackEmailPrompt,
+    winbackInputs,
+    workspaceId
+  );
+
+  // Enhance the opportunity rationale fields using opportunity-rationale-v1
+  await enhanceOpportunityRationale({
+    opportunity,
+    operatorIntent: params.operatorIntent,
+    context,
+    workspaceId,
+  });
 
   return {
-    subject: emailCopy.subject,
-    preview_text: emailCopy.preview_text,
-    body_html: emailCopy.body_html,
-    body_text: emailCopy.body_text,
+    subject: aiCopy.subject,
+    preview_text: aiCopy.body.substring(0, 150),
+    body_html: buildEmailHtml(aiCopy.body, aiCopy.cta, fromName),
+    body_text: buildEmailText(aiCopy.body, aiCopy.cta),
     from_name: fromName,
     from_email: fromEmail,
     recipient_segment: "dormant_30_days",
@@ -227,7 +308,7 @@ async function generatePauseProductPayload(params: {
   context: Record<string, any>;
   workspaceId: string;
 }): Promise<PauseProductPayload> {
-  const { opportunity, context: _context } = params;
+  const { opportunity, context: _context, workspaceId } = params;
 
   // Extract product IDs from opportunity events
   const productIds = extractProductIdsFromEvents(opportunity.event_links);
@@ -236,8 +317,15 @@ async function generatePauseProductPayload(params: {
     throw new Error("No product IDs found in opportunity context");
   }
 
-  // Generate reason
-  const reason = opportunity.rationale || "Low inventory - preventing overselling";
+  // Enhance the opportunity rationale fields using opportunity-rationale-v1
+  const rationaleOutput = await enhanceOpportunityRationale({
+    opportunity,
+    operatorIntent: params.operatorIntent,
+    context: _context,
+    workspaceId,
+  });
+
+  const reason = rationaleOutput?.rationale || opportunity.rationale || "Low inventory - preventing overselling";
 
   return {
     product_ids: productIds,
@@ -248,80 +336,69 @@ async function generatePauseProductPayload(params: {
 }
 
 // ============================================================================
-// AI GENERATION (WITH FALLBACKS)
+// OPPORTUNITY RATIONALE ENHANCER
 // ============================================================================
 
-async function generateDiscountTitle(_params: {
-  operatorIntent: OperatorIntent;
+/**
+ * Calls opportunity-rationale-v1 to generate enhanced rationale, why_now, and
+ * counterfactual for the opportunity. Updates the opportunity record in-place.
+ * Never throws — falls back gracefully if AI is unavailable.
+ */
+async function enhanceOpportunityRationale(params: {
   opportunity: any;
+  operatorIntent: OperatorIntent;
   context: Record<string, any>;
   workspaceId: string;
-}): Promise<string> {
-  // TODO: Implement AI generation via prompt system
-  // For now, use smart fallback
-  throw new Error("AI not yet implemented");
-}
+}): Promise<OpportunityRationaleOutput | null> {
+  const { opportunity, operatorIntent, context, workspaceId } = params;
 
-async function generateEmailCopy(_params: {
-  operatorIntent: OperatorIntent;
-  opportunity: any;
-  context: Record<string, any>;
-  workspaceId: string;
-}): Promise<{ subject: string; body_html: string; body_text: string; preview_text: string }> {
-  // TODO: Implement AI generation via prompt system
-  // For now, use smart fallback
-  throw new Error("AI not yet implemented");
-}
+  try {
+    const eventsSummary = buildEventsSummary(opportunity.event_links);
 
-// ============================================================================
-// FALLBACK GENERATORS
-// ============================================================================
+    const rationaleInputs: OpportunityRationaleInput = {
+      workspaceId,
+      opportunityType: opportunity.type,
+      operatorIntent,
+      eventsSummary,
+      storeContext: {
+        storeName: context.storeName,
+        productName: context.productName || extractProductNameFromEvents(opportunity.event_links),
+        currentInventory: context.inventoryLevel,
+        velocityLast14Days: context.velocityScore,
+        lastPurchaseDate: context.lastPurchaseDate,
+        customerSegmentSize: context.customerSegmentSize,
+      },
+      timeWindow: {
+        startDate: opportunity.created_at
+          ? new Date(opportunity.created_at).toISOString()
+          : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        endDate: new Date().toISOString(),
+      },
+    };
 
-function generateFallbackDiscountTitle(opportunityType: string): string {
-  const templates: Record<string, string> = {
-    inventory_clearance: "Inventory Clearance - Limited Time Offer",
-    seasonal_promotion: "Seasonal Sale - Don't Miss Out",
-    velocity_boost: "Featured Products Sale",
-    default: "Special Discount - Limited Time",
-  };
+    const rationaleOutput = await generateAICopy<OpportunityRationaleInput, OpportunityRationaleOutput>(
+      opportunityRationalePrompt,
+      rationaleInputs,
+      workspaceId
+    );
 
-  return templates[opportunityType] || templates.default;
-}
+    // Persist enhanced rationale back to the opportunity record
+    await prisma.opportunity.update({
+      where: { id: opportunity.id },
+      data: {
+        rationale: rationaleOutput.rationale,
+        why_now: rationaleOutput.why_now,
+        counterfactual: rationaleOutput.counterfactual,
+        ...(rationaleOutput.impact_range && { impact_range: rationaleOutput.impact_range }),
+      },
+    });
 
-function generateFallbackEmailCopy(_opportunityType: string): {
-  subject: string;
-  body_html: string;
-  body_text: string;
-  preview_text: string;
-} {
-  return {
-    subject: "We miss you - Come back for a special offer",
-    preview_text: "Your favorite products are waiting for you",
-    body_html: `
-      <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1>We Miss You!</h1>
-          <p>It's been a while since your last visit. We wanted to reach out with a special offer just for you.</p>
-          <p>Come back and check out what's new in our store.</p>
-          <a href="{{store_url}}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0;">
-            Shop Now
-          </a>
-          <p style="color: #6B7280; font-size: 14px;">If you'd prefer not to receive these emails, you can unsubscribe below.</p>
-        </body>
-      </html>
-    `,
-    body_text: `
-We Miss You!
-
-It's been a while since your last visit. We wanted to reach out with a special offer just for you.
-
-Come back and check out what's new in our store.
-
-Visit: {{store_url}}
-
-If you'd prefer not to receive these emails, you can unsubscribe.
-    `,
-  };
+    return rationaleOutput;
+  } catch (error) {
+    // Non-fatal: rationale enhancement failure must not block draft creation
+    console.error("Opportunity rationale enhancement failed, continuing with existing values:", error);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -344,6 +421,28 @@ function extractProductIdsFromEvents(eventLinks: any[]): string[] {
   return [...new Set(productIds)]; // Deduplicate
 }
 
+function extractProductNameFromEvents(eventLinks: any[]): string | undefined {
+  for (const link of eventLinks) {
+    const payload = link.event.payload_json as any;
+    if (payload.product_title) return payload.product_title;
+    if (payload.product_name) return payload.product_name;
+  }
+  return undefined;
+}
+
+function buildEventsSummary(eventLinks: any[]): string {
+  if (!eventLinks || eventLinks.length === 0) {
+    return "No specific events recorded.";
+  }
+
+  return eventLinks
+    .map((link: any) => {
+      const event = link.event;
+      return `Event type: ${event.type} at ${event.occurred_at}`;
+    })
+    .join("; ");
+}
+
 function calculateDiscountValue(context: Record<string, any>): number {
   // Smart discount calculation based on inventory risk
   const inventoryLevel = context.inventoryLevel || 0;
@@ -353,6 +452,34 @@ function calculateDiscountValue(context: Record<string, any>): number {
   if (inventoryLevel > 50) return 20; // 20% for medium inventory
   if (inventoryLevel > 20) return 25; // 25% for low inventory
   return 30; // 30% for very low inventory
+}
+
+function resolveUrgencyLevel(context: Record<string, any>): "low" | "medium" | "high" {
+  const inventoryLevel = context.inventoryLevel || 0;
+  if (inventoryLevel <= 20) return "high";
+  if (inventoryLevel <= 50) return "medium";
+  return "low";
+}
+
+function buildEmailHtml(body: string, cta: string, storeName: string): string {
+  return `
+    <html>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <p>${body.replace(/\n/g, "</p><p>")}</p>
+        <a href="{{store_url}}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0;">
+          ${cta}
+        </a>
+        <p style="color: #6B7280; font-size: 14px;">
+          — ${storeName}<br/>
+          If you'd prefer not to receive these emails, you can <a href="{{unsubscribe_url}}">unsubscribe</a>.
+        </p>
+      </body>
+    </html>
+  `.trim();
+}
+
+function buildEmailText(body: string, cta: string): string {
+  return `${body}\n\n${cta}: {{store_url}}\n\nTo unsubscribe: {{unsubscribe_url}}`;
 }
 
 // ============================================================================

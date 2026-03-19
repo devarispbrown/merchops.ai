@@ -63,9 +63,17 @@ const nextConfig = {
 };
 
 const sentryWebpackPluginOptions = {
+  // Suppress build-time upload logs when no DSN is configured.
   silent: true,
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  // Do not expose source maps to the browser in production; they are
+  // uploaded to Sentry and deleted from the public bundle.
+  hideSourceMaps: true,
+  // Disable the plugin entirely when no DSN is set so the build stays
+  // clean without a Sentry account.
+  disableClientWebpackPlugin: !process.env.NEXT_PUBLIC_SENTRY_DSN,
+  disableServerWebpackPlugin: !process.env.SENTRY_DSN && !process.env.NEXT_PUBLIC_SENTRY_DSN,
 };
 
 export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);

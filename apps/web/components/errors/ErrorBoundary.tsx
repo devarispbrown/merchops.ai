@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, ReactNode } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -33,16 +34,15 @@ export class ErrorBoundary extends Component<
     // Log error to monitoring service (Sentry)
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // Report to Sentry
-    if (typeof window !== 'undefined' && (window as unknown as { Sentry?: { captureException: (error: Error, options: unknown) => void } }).Sentry) {
-      (window as unknown as { Sentry: { captureException: (error: Error, options: unknown) => void } }).Sentry.captureException(error, {
-        contexts: {
-          react: {
-            componentStack: errorInfo.componentStack,
-          },
+    // Report to Sentry via the SDK — enabled flag in sentry.client.config.ts
+    // ensures this is a no-op when NEXT_PUBLIC_SENTRY_DSN is not set.
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
         },
-      });
-    }
+      },
+    });
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);

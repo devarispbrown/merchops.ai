@@ -6,6 +6,8 @@
 import { prisma } from "../../db/client";
 import { ActionDraftState, ExecutionStatus, getPayloadSchema } from "../types";
 import { randomBytes } from "crypto";
+import { getExecutionQueue } from "../../jobs/queues";
+import { QUEUE_NAMES } from "../../jobs/config";
 
 // ============================================================================
 // TYPES
@@ -115,6 +117,8 @@ export async function approveDraft(input: ApproveDraftInput): Promise<ApproveDra
     executionId: result.id,
     workspaceId,
     executionType: draft.execution_type,
+    actionDraftId: draftId,
+    idempotencyKey,
     payload: draft.payload_json as any,
   });
 
@@ -145,38 +149,33 @@ async function enqueueExecutionJob(params: {
   executionId: string;
   workspaceId: string;
   executionType: string;
+  actionDraftId: string;
+  idempotencyKey: string;
   payload: any;
 }): Promise<void> {
-  // TODO: Integrate with BullMQ
-  // For now, we'll execute synchronously in the background
-  // This should be replaced with proper job queue
+  const queue = getExecutionQueue();
 
-  console.log("[APPROVE] Enqueuing execution job:", {
-    executionId: params.executionId,
-    executionType: params.executionType,
-  });
+  if (!queue) {
+    throw new Error("Redis is required for execution dispatch");
+  }
 
-  // In production, this would be:
-  // await executionQueue.add('execute-action', params, {
-  //   jobId: params.executionId,
-  //   attempts: 3,
-  //   backoff: {
-  //     type: 'exponential',
-  //     delay: 2000,
-  //   },
-  // });
+  const jobData = {
+    execution_id: params.executionId,
+    workspace_id: params.workspaceId,
+    action_draft_id: params.actionDraftId,
+    execution_type: params.executionType,
+    payload: params.payload,
+    idempotency_key: params.idempotencyKey,
+  };
 
-  // For MVP, trigger execution asynchronously
-  setImmediate(async () => {
-    try {
-      const { executeAction } = await import("../execution-engine");
-      await executeAction({
-        executionId: params.executionId,
-        workspaceId: params.workspaceId,
-      });
-    } catch (error) {
-      console.error("[APPROVE] Background execution failed:", error);
-    }
+  await queue.add(QUEUE_NAMES.EXECUTION, jobData, {
+    jobId: params.executionId,
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 5000,
+    },
+    removeOnComplete: true,
   });
 }
 

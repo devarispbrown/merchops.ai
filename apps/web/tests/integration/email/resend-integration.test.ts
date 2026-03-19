@@ -30,6 +30,67 @@ vi.mock('resend', () => ({
   }),
 }));
 
+// ---------------------------------------------------------------------------
+// Prisma mock — required since getRecipients queries the database.
+// Three customers with valid emails used across all scenarios.
+// ---------------------------------------------------------------------------
+
+const MOCK_CUSTOMER_ROWS = [
+  {
+    id: 'row-1', workspace_id: 'workspace-1', object_type: 'customer',
+    shopify_id: '1', version: 1, synced_at: new Date(),
+    data_json: { id: 1, email: 'customer1@test.com', first_name: 'Alice', last_name: 'A' },
+  },
+  {
+    id: 'row-2', workspace_id: 'workspace-1', object_type: 'customer',
+    shopify_id: '2', version: 1, synced_at: new Date(),
+    data_json: { id: 2, email: 'customer2@test.com', first_name: 'Bob', last_name: 'B' },
+  },
+  {
+    id: 'row-3', workspace_id: 'workspace-1', object_type: 'customer',
+    shopify_id: '3', version: 1, synced_at: new Date(),
+    data_json: { id: 3, email: 'customer3@test.com', first_name: 'Carol', last_name: 'C' },
+  },
+];
+
+// Same customers but on workspace-abc-123 for workspace-specific tests
+const MOCK_CUSTOMER_ROWS_WS_ABC = MOCK_CUSTOMER_ROWS.map((r) => ({
+  ...r,
+  workspace_id: 'workspace-abc-123',
+}));
+
+// Orders placed 45 days ago — qualifies for dormant_30 but not dormant_60.
+const FORTY_FIVE_DAYS_AGO = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+const MOCK_ORDER_ROWS = [
+  {
+    id: 'order-row-1', workspace_id: 'workspace-1', object_type: 'order',
+    shopify_id: 'o1', version: 1, synced_at: new Date(),
+    data_json: { id: 'o1', created_at: FORTY_FIVE_DAYS_AGO, customer: { id: 1 } },
+  },
+  {
+    id: 'order-row-2', workspace_id: 'workspace-1', object_type: 'order',
+    shopify_id: 'o2', version: 1, synced_at: new Date(),
+    data_json: { id: 'o2', created_at: FORTY_FIVE_DAYS_AGO, customer: { id: 2 } },
+  },
+  {
+    id: 'order-row-3', workspace_id: 'workspace-1', object_type: 'order',
+    shopify_id: 'o3', version: 1, synced_at: new Date(),
+    data_json: { id: 'o3', created_at: FORTY_FIVE_DAYS_AGO, customer: { id: 3 } },
+  },
+];
+
+const mockPrismaFindMany = vi.fn();
+
+vi.mock('@/server/db/client', () => ({
+  prisma: {
+    shopifyObjectCache: {
+      findMany: mockPrismaFindMany,
+    },
+  },
+}));
+
+// ---------------------------------------------------------------------------
+
 describe('Resend Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,6 +100,8 @@ describe('Resend Integration', () => {
       data: { id: 'msg-123' },
       error: null,
     });
+    // Default: 3 customers for all_customers segment
+    mockPrismaFindMany.mockResolvedValue(MOCK_CUSTOMER_ROWS);
     process.env.EMAIL_SANDBOX_MODE = 'false';
     process.env.EMAIL_PROVIDER = 'resend';
     process.env.RESEND_API_KEY = 'test-api-key';
@@ -52,6 +115,11 @@ describe('Resend Integration', () => {
         error: null,
       });
 
+      // dormant_30 needs customer rows + order rows
+      mockPrismaFindMany
+        .mockResolvedValueOnce(MOCK_CUSTOMER_ROWS)
+        .mockResolvedValueOnce(MOCK_ORDER_ROWS);
+
       const { executeEmail } = await import('@/server/actions/execute/email');
 
       const payload = {
@@ -61,7 +129,7 @@ describe('Resend Integration', () => {
         body_text: 'Welcome Back! We have exciting offers for you.',
         from_name: 'MerchOps Store',
         from_email: 'store@example.com',
-        recipient_segment: 'dormant_30_days',
+        recipient_segment: 'dormant_30',
       };
 
       const result = await executeEmail({
@@ -97,7 +165,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       await executeEmail({
@@ -109,7 +177,7 @@ describe('Resend Integration', () => {
       expect(callArgs.tags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ name: 'workspace_id', value: 'workspace-1' }),
-          expect.objectContaining({ name: 'segment', value: 'test' }),
+          expect.objectContaining({ name: 'segment', value: 'all_customers' }),
         ])
       );
     });
@@ -128,7 +196,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       await executeEmail({
@@ -155,7 +223,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -181,7 +249,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -207,7 +275,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -233,7 +301,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -264,7 +332,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -302,7 +370,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       const result = await executeEmail({
@@ -332,7 +400,7 @@ describe('Resend Integration', () => {
         body_text: 'Original content',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       await executeEmail({
@@ -362,7 +430,7 @@ describe('Resend Integration', () => {
         body_text: 'Content',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'test',
+        recipient_segment: 'all_customers',
       };
 
       await executeEmail({
@@ -373,7 +441,6 @@ describe('Resend Integration', () => {
       const callArgs = mockSend.mock.calls[0][0];
       const sentHtml = callArgs.html;
 
-      // Unsubscribe should be before </body>
       const unsubscribeIndex = sentHtml.indexOf('Unsubscribe');
       const bodyCloseIndex = sentHtml.indexOf('</body>');
 
@@ -390,6 +457,9 @@ describe('Resend Integration', () => {
         error: null,
       });
 
+      // Use all_customers on workspace-abc-123 to avoid order fetch complexity
+      mockPrismaFindMany.mockResolvedValueOnce(MOCK_CUSTOMER_ROWS_WS_ABC);
+
       const { executeEmail } = await import('@/server/actions/execute/email');
 
       const payload = {
@@ -398,7 +468,7 @@ describe('Resend Integration', () => {
         body_text: 'Test',
         from_name: 'Store',
         from_email: 'store@example.com',
-        recipient_segment: 'dormant_90_days',
+        recipient_segment: 'all_customers',
       };
 
       await executeEmail({
@@ -412,7 +482,7 @@ describe('Resend Integration', () => {
       expect(tags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ name: 'workspace_id', value: 'workspace-abc-123' }),
-          expect.objectContaining({ name: 'segment', value: 'dormant_90_days' }),
+          expect.objectContaining({ name: 'segment', value: 'all_customers' }),
         ])
       );
       expect(tags).toEqual(

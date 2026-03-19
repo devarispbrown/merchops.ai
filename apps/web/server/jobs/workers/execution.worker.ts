@@ -16,6 +16,7 @@ import {
   logJobFailed,
   logExecution,
 } from '../../observability/logger';
+import { captureJobError } from '../../observability/sentry';
 import { ExecutionType, ExecutionStatus, isRetryableError as _isRetryableError } from '../../actions/types';
 import { executeDiscount } from '../../actions/execute/discount';
 import { executePauseProduct } from '../../actions/execute/pause-product';
@@ -82,11 +83,13 @@ if (executionWorker) {
         job.attemptsMade,
         job.data.workspace_id
       );
+      captureJobError(error as Error, job.name!, job.id!, job.data, job.attemptsMade);
     }
   });
 
   executionWorker.on('error', (error) => {
     logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+    captureJobError(error, 'execution-worker', 'unknown', {}, 0);
   });
 } else {
   logger.warn('Execution worker not initialized - Redis not configured');

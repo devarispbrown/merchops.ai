@@ -5,7 +5,9 @@
 
 import { Resend } from "resend";
 
+import { prisma } from "../../db/client";
 import { WinbackEmailPayload, ExecutionErrorCode, ExecutionError } from "../types";
+import { filterSuppressedRecipients } from "../../klaviyo/frequency-caps";
 
 // ============================================================================
 // TYPES
@@ -112,20 +114,28 @@ async function getEmailProvider(_workspaceId: string): Promise<EmailProvider> {
 // ============================================================================
 
 async function createEmailDraft(
-  _workspaceId: string,
+  workspaceId: string,
   payload: WinbackEmailPayload
 ): Promise<Record<string, unknown>> {
   // Store email as a draft that can be reviewed and sent manually
   // Database integration would go here
 
-  // Get recipient count
-  const recipientCount = 3; // Mock count for now
+  // Get recipient count from the real segment query
+  const rawRecipients = await getRecipients(workspaceId, payload.recipient_segment);
+
+  // Filter suppressed profiles — soft integration, proceeds if Klaviyo unavailable
+  const { recipients, suppressedCount, checked } = await filterSuppressedRecipients(
+    workspaceId,
+    rawRecipients
+  );
+  const recipientCount = recipients.length;
 
   // eslint-disable-next-line no-console
   console.log("[EXECUTE] Creating email draft:", {
     subject: payload.subject,
     recipientSegment: payload.recipient_segment,
     recipientCount,
+    ...(checked && { suppressedFiltered: suppressedCount }),
   });
 
   // In production, this might create a draft in the email provider
@@ -159,8 +169,13 @@ async function sendViaResend(
   // Initialize Resend client
   const resend = new Resend(apiKey);
 
-  // Get recipients
-  const recipients = await getRecipients(workspaceId, payload.recipient_segment);
+  // Get recipients and filter suppressed profiles (soft integration)
+  const rawRecipients = await getRecipients(workspaceId, payload.recipient_segment);
+
+  const { recipients, suppressedCount, checked } = await filterSuppressedRecipients(
+    workspaceId,
+    rawRecipients
+  );
 
   if (recipients.length === 0) {
     throw new Error("No recipients found for segment");
@@ -170,6 +185,7 @@ async function sendViaResend(
   console.log("[EXECUTE] Sending email via Resend:", {
     subject: payload.subject,
     recipientCount: recipients.length,
+    ...(checked && { suppressedFiltered: suppressedCount }),
   });
 
   try {
@@ -222,7 +238,6 @@ async function sendViaResend(
     // Check for any errors
     const errors = results.filter((r) => r.error);
     if (errors.length > 0) {
-      // eslint-disable-next-line no-console
       console.error("[EXECUTE] Some emails failed:", errors);
     }
 
@@ -239,7 +254,6 @@ async function sendViaResend(
       executedAt: new Date().toISOString(),
     };
   } catch (error: unknown) {
-    // eslint-disable-next-line no-console
     console.error("[EXECUTE] Resend API error:", error);
     throw error;
   }
@@ -257,8 +271,13 @@ async function sendViaSendGrid(
   // const sgMail = require('@sendgrid/mail');
   // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-  // Get recipients
-  const recipients = await getRecipients(workspaceId, payload.recipient_segment);
+  // Get recipients and filter suppressed profiles (soft integration)
+  const rawRecipients = await getRecipients(workspaceId, payload.recipient_segment);
+
+  const { recipients, suppressedCount, checked } = await filterSuppressedRecipients(
+    workspaceId,
+    rawRecipients
+  );
 
   if (recipients.length === 0) {
     throw new Error("No recipients found for segment");
@@ -268,6 +287,7 @@ async function sendViaSendGrid(
   console.log("[EXECUTE] Sending email via SendGrid:", {
     subject: payload.subject,
     recipientCount: recipients.length,
+    ...(checked && { suppressedFiltered: suppressedCount }),
   });
 
   // Mock send
@@ -324,20 +344,207 @@ export async function rollbackEmail(params: {
 interface Recipient {
   id: string;
   email: string;
-  segment: string;
+  firstName: string;
+  lastName: string;
 }
 
-async function getRecipients(_workspaceId: string, segment: string): Promise<Recipient[]> {
-  // TODO: Query customer database based on segment
-  // For now, return mock data
+// Shape of a Shopify customer payload stored in ShopifyObjectCache.data_json
+interface ShopifyCustomerPayload {
+  id: number | string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  // Shopify stores the last order date here on the customer object (updated via webhooks / sync)
+  last_order_id?: number | string | null;
+  // email_marketing_consent is present on Shopify customers API response
+  email_marketing_consent?: {
+    state?: string; // "subscribed" | "unsubscribed" | "not_subscribed" | "pending" | "redacted"
+    opt_in_level?: string;
+    consent_updated_at?: string | null;
+  } | null;
+  // Some sync implementations surface last_order_at at the top level
+  last_order_at?: string | null;
+  // orders_count is cached by the Shopify API
+  orders_count?: number;
+}
 
-  const mockRecipients = [
-    { id: "1", email: "customer1@example.com", segment },
-    { id: "2", email: "customer2@example.com", segment },
-    { id: "3", email: "customer3@example.com", segment },
-  ];
+// Shape of a Shopify order payload stored in ShopifyObjectCache.data_json
+interface ShopifyOrderPayload {
+  id: number | string;
+  created_at?: string;
+  customer?: {
+    id: number | string;
+  } | null;
+}
 
-  return mockRecipients;
+/**
+ * Valid dormant segment identifiers that can be used in recipient_segment.
+ */
+const DORMANT_SEGMENTS = ["dormant_30", "dormant_60", "dormant_90"] as const;
+type DormantSegment = (typeof DORMANT_SEGMENTS)[number];
+
+function isDormantSegment(segment: string): segment is DormantSegment {
+  return (DORMANT_SEGMENTS as readonly string[]).includes(segment);
+}
+
+/**
+ * Returns the dormancy threshold in days for a given segment string.
+ * Returns null for non-dormant segments.
+ */
+function dormantThresholdDays(segment: DormantSegment): number {
+  switch (segment) {
+    case "dormant_30":
+      return 30;
+    case "dormant_60":
+      return 60;
+    case "dormant_90":
+      return 90;
+  }
+}
+
+/**
+ * Queries the ShopifyObjectCache for real customer recipients matching the
+ * given segment. Returns an empty array for unknown or empty segments so the
+ * caller can surface the appropriate `no_recipients` status.
+ *
+ * Segment values:
+ *   dormant_30  – customers whose last order was >30 days ago
+ *   dormant_60  – customers whose last order was >60 days ago
+ *   dormant_90  – customers whose last order was >90 days ago
+ *   all_customers – all customers with a valid email address
+ *
+ * Customers without an email address are always excluded.
+ *
+ * NOTE: email_marketing_consent filtering – if the Shopify customer payload
+ * contains `email_marketing_consent.state`, only customers with
+ * state === "subscribed" are included. If the field is absent the customer is
+ * included (opt-in data not yet available for this store).
+ * TODO: enforce consent filtering strictly once all syncs populate this field.
+ */
+export async function getRecipients(workspaceId: string, segment: string): Promise<Recipient[]> {
+  if (!segment) {
+    return [];
+  }
+
+  // Fetch all cached customers for this workspace
+  const customerRows = await prisma.shopifyObjectCache.findMany({
+    where: {
+      workspace_id: workspaceId,
+      object_type: "customer",
+    },
+  });
+
+  if (customerRows.length === 0) {
+    return [];
+  }
+
+  // For dormant segments we need order data to determine last-order date
+  let orderRowsByCustomerId: Map<string, Date> | null = null;
+
+  if (isDormantSegment(segment)) {
+    const orderRows = await prisma.shopifyObjectCache.findMany({
+      where: {
+        workspace_id: workspaceId,
+        object_type: "order",
+      },
+    });
+
+    // Build a map of customerId -> most-recent order date
+    const latestOrderDate = new Map<string, Date>();
+
+    for (const row of orderRows) {
+      const orderData = row.data_json as unknown as ShopifyOrderPayload;
+      const customerId = orderData.customer?.id;
+      if (!customerId) {
+        continue;
+      }
+      const customerKey = String(customerId);
+      const orderDate = orderData.created_at ? new Date(orderData.created_at) : null;
+      if (!orderDate || isNaN(orderDate.getTime())) {
+        continue;
+      }
+      const existing = latestOrderDate.get(customerKey);
+      if (!existing || orderDate > existing) {
+        latestOrderDate.set(customerKey, orderDate);
+      }
+    }
+
+    orderRowsByCustomerId = latestOrderDate;
+  }
+
+  const now = new Date();
+  const recipients: Recipient[] = [];
+
+  for (const row of customerRows) {
+    const customerData = row.data_json as unknown as ShopifyCustomerPayload;
+
+    // Must have a valid email address
+    const email = customerData.email?.trim();
+    if (!email) {
+      continue;
+    }
+
+    // Filter by email_marketing_consent if the field is present in the payload.
+    // TODO: Once all Shopify syncs reliably populate email_marketing_consent,
+    // change this to exclude customers where the field is absent (treat absence
+    // as "not subscribed"). For now we include them to avoid silent data loss.
+    if (customerData.email_marketing_consent !== undefined && customerData.email_marketing_consent !== null) {
+      const consentState = customerData.email_marketing_consent.state;
+      if (consentState && consentState !== "subscribed") {
+        continue;
+      }
+    }
+
+    const firstName = customerData.first_name ?? "";
+    const lastName = customerData.last_name ?? "";
+    const customerId = String(customerData.id);
+
+    if (segment === "all_customers") {
+      recipients.push({ id: customerId, email, firstName, lastName });
+      continue;
+    }
+
+    if (isDormantSegment(segment)) {
+      const thresholdDays = dormantThresholdDays(segment);
+
+      // Resolve last order date: prefer order cache map, fall back to customer
+      // payload field if present (some sync implementations write it there).
+      let lastOrderDate: Date | null = null;
+
+      if (orderRowsByCustomerId) {
+        lastOrderDate = orderRowsByCustomerId.get(customerId) ?? null;
+      }
+
+      if (!lastOrderDate && customerData.last_order_at) {
+        const parsed = new Date(customerData.last_order_at);
+        if (!isNaN(parsed.getTime())) {
+          lastOrderDate = parsed;
+        }
+      }
+
+      // No order on record — skip for dormant segments
+      if (!lastOrderDate) {
+        continue;
+      }
+
+      const daysSinceLastOrder = (now.getTime() - lastOrderDate.getTime()) / (24 * 60 * 60 * 1000);
+
+      if (daysSinceLastOrder > thresholdDays) {
+        recipients.push({ id: customerId, email, firstName, lastName });
+      }
+
+      continue;
+    }
+
+    // Unknown segment — skip this customer (return empty at end)
+  }
+
+  // For an unrecognised segment, return empty so caller surfaces no_recipients
+  if (segment !== "all_customers" && !isDormantSegment(segment)) {
+    return [];
+  }
+
+  return recipients;
 }
 
 // ============================================================================

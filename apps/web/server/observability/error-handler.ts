@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { logger } from './logger';
+import { captureException as sentryCaptureException } from './sentry';
 import { getCorrelationId } from '../../lib/correlation';
 import { Prisma } from '@prisma/client';
 
@@ -248,10 +249,19 @@ export function handleError(error: unknown): NextResponse<ErrorResponse> {
     `Error: ${appError.message}`
   );
 
-  // Send to Sentry if configured
-  if (process.env.SENTRY_DSN && appError.statusCode >= 500) {
-    // TODO: Integrate with Sentry
-    // captureException(appError, { contexts: { correlation: { correlationId } } });
+  // Send to Sentry for server errors only — validation/auth errors are expected
+  // and do not represent bugs worth tracking.
+  if (appError.statusCode >= 500) {
+    sentryCaptureException(appError, {
+      tags: {
+        errorType: appError.type,
+        statusCode: appError.statusCode.toString(),
+        correlationId,
+      },
+      extra: {
+        details: appError.details,
+      },
+    });
   }
 
   // Return error response

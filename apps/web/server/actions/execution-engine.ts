@@ -8,6 +8,9 @@ import { ExecutionStatus, ExecutionType, isRetryableError } from "./types";
 import { executeDiscount } from "./execute/discount";
 import { executePauseProduct } from "./execute/pause-product";
 import { executeEmail } from "./execute/email";
+import { executeKlaviyoSegment } from "./execute/klaviyo-segment";
+import { executeKlaviyoCampaignDraft } from "./execute/klaviyo-campaign";
+import { executeKlaviyoFlowTrigger } from "./execute/klaviyo-flow";
 
 // ============================================================================
 // TYPES
@@ -259,6 +262,15 @@ async function callExecutor(params: {
 
     case ExecutionType.PAUSE_PRODUCT:
       return await executePauseProduct({ workspaceId, payload });
+
+    case ExecutionType.KLAVIYO_SEGMENT_SYNC:
+      return await executeKlaviyoSegment({ workspaceId, payload });
+
+    case ExecutionType.KLAVIYO_CAMPAIGN_DRAFT:
+      return await executeKlaviyoCampaignDraft({ workspaceId, payload });
+
+    case ExecutionType.KLAVIYO_FLOW_TRIGGER:
+      return await executeKlaviyoFlowTrigger({ workspaceId, payload });
 
     default:
       throw new Error(`Unsupported execution type: ${executionType}`);

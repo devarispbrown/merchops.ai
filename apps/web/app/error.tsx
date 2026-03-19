@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -16,10 +17,9 @@ export default function Error({
     // Log error to monitoring service
     console.error('Global error:', error);
 
-    // Report to Sentry if available
-    if (typeof window !== 'undefined' && (window as unknown as { Sentry?: { captureException: (error: Error) => void } }).Sentry) {
-      (window as unknown as { Sentry: { captureException: (error: Error) => void } }).Sentry.captureException(error);
-    }
+    // Report to Sentry via the SDK — enabled flag in sentry.client.config.ts
+    // ensures this is a no-op when NEXT_PUBLIC_SENTRY_DSN is not set.
+    Sentry.captureException(error);
   }, [error]);
 
   return (

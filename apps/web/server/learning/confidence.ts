@@ -2,7 +2,8 @@
  * Confidence Score Calculation
  *
  * Computes confidence scores for operator intents based on recent outcomes
- * Scores are deterministic and based on track record
+ * and persists each computation as a historical record in the confidence_scores
+ * table. Scores are deterministic and based on track record.
  */
 
 import { OperatorIntent, OutcomeType as PrismaOutcomeType } from '@prisma/client';
@@ -185,6 +186,76 @@ export async function calculateAllConfidenceScores(
 }
 
 /**
+ * Persist a single confidence score record.
+ *
+ * Every call creates a new row so the full history is preserved.
+ * Callers should use updateConfidenceScores to compute and persist
+ * all intents in one operation.
+ */
+async function persistConfidenceScore(
+  workspaceId: string,
+  score: ConfidenceScore
+): Promise<void> {
+  await prisma.confidenceScore.create({
+    data: {
+      workspace_id: workspaceId,
+      operator_intent: score.operator_intent,
+      score: score.score,
+      trend: score.trend,
+      sample_size: score.recent_executions,
+      computed_at: score.last_computed_at,
+    },
+  });
+}
+
+/**
+ * Get the most recent confidence score per operator intent for a workspace.
+ *
+ * Returns one record per intent (the latest computed_at), not the full history.
+ * If no persisted record exists for an intent, that intent is omitted from the
+ * result — callers can fill in defaults as needed.
+ */
+export async function getLatestConfidenceScores(
+  workspaceId: string
+): Promise<ConfidenceScore[]> {
+  const intents: OperatorIntent[] = [
+    'reduce_inventory_risk',
+    'reengage_dormant_customers',
+    'protect_margin',
+  ];
+
+  // Fetch the most recent record for each intent in a single round-trip per
+  // intent. Prisma does not yet support lateral joins, so we run three queries
+  // concurrently — still much cheaper than re-computing scores on every read.
+  const latestPerIntent = await Promise.all(
+    intents.map((intent) =>
+      prisma.confidenceScore.findFirst({
+        where: {
+          workspace_id: workspaceId,
+          operator_intent: intent,
+        },
+        orderBy: {
+          computed_at: 'desc',
+        },
+      })
+    )
+  );
+
+  return latestPerIntent
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .map((row) => ({
+      operator_intent: row.operator_intent as OperatorIntent,
+      score: row.score,
+      trend: row.trend as 'improving' | 'stable' | 'declining',
+      recent_executions: row.sample_size,
+      helped_count: 0, // Not stored at the row level; summary stats only
+      neutral_count: 0,
+      hurt_count: 0,
+      last_computed_at: row.computed_at,
+    }));
+}
+
+/**
  * Get confidence level description
  */
 export function getConfidenceLevel(score: number): string {
@@ -226,13 +297,15 @@ export function getConfidenceExplanation(
 }
 
 /**
- * Update and persist confidence scores for a workspace
+ * Compute and persist confidence scores for a workspace
  *
- * Calculates confidence scores for all operator intents and stores them
- * in a JSON field on the workspace record or a dedicated confidence_scores table.
+ * Calculates confidence scores for all operator intents, writes each as a new
+ * historical row in the confidence_scores table, then returns the computed
+ * scores. Persistence failures are caught and logged so callers always receive
+ * the freshly computed scores even when the database write fails.
  *
  * @param workspaceId - Workspace to update confidence scores for
- * @returns Array of updated confidence scores
+ * @returns Array of computed confidence scores
  */
 export async function updateConfidenceScores(
   workspaceId: string
@@ -240,36 +313,14 @@ export async function updateConfidenceScores(
   // Calculate all confidence scores
   const scores = await calculateAllConfidenceScores(workspaceId);
 
-  // Store confidence scores in workspace metadata
-  // Note: This assumes there's a confidence_scores_json field or similar
-  // Adjust based on your actual schema
+  // Persist each score as a new historical record (append, not upsert)
   try {
-    const _scoresData = scores.reduce((acc, score) => {
-      acc[score.operator_intent] = {
-        score: score.score,
-        trend: score.trend,
-        recent_executions: score.recent_executions,
-        helped_count: score.helped_count,
-        neutral_count: score.neutral_count,
-        hurt_count: score.hurt_count,
-        last_computed_at: score.last_computed_at.toISOString(),
-      };
-      return acc;
-    }, {} as Record<string, any>);
-
-    // Update workspace with confidence scores
-    // If you have a dedicated table, use that instead
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        // Assuming there's a metadata_json or similar field
-        // Adjust based on your actual schema
-        updated_at: new Date(),
-      },
-    });
+    await Promise.all(
+      scores.map((score) => persistConfidenceScore(workspaceId, score))
+    );
   } catch (error) {
     console.error('Failed to persist confidence scores:', error);
-    // Don't throw - return calculated scores even if persistence fails
+    // Don't throw — return computed scores even if persistence fails
   }
 
   return scores;

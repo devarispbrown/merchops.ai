@@ -14,6 +14,7 @@ import {
   logJobComplete,
   logJobFailed,
 } from '../../observability/logger';
+import { captureJobError } from '../../observability/sentry';
 import { getOpportunityGenerateQueue } from '../queues';
 import {
   computeInventoryThresholdEvents,
@@ -89,11 +90,13 @@ if (eventComputeWorker) {
         job.attemptsMade,
         job.data.workspace_id
       );
+      captureJobError(error as Error, job.name!, job.id!, job.data, job.attemptsMade);
     }
   });
 
   eventComputeWorker.on('error', (error) => {
     logger.error({ error: error.message, stack: error.stack }, 'Worker error');
+    captureJobError(error, 'event-compute-worker', 'unknown', {}, 0);
   });
 } else {
   logger.warn('Event compute worker not initialized - Redis not configured');
