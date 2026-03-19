@@ -6,7 +6,6 @@ import {
   ShoppingBag,
   Users,
   Shield,
-  MessageSquare,
   Zap,
   CheckCircle,
   ArrowRight,
@@ -25,7 +24,6 @@ import { CampaignCard } from '../CampaignCard'
 import { DraftEditorMock } from '../DraftEditorMock'
 import { FAQItem } from '../FAQItem'
 import { FadeInUp } from '../FadeInUp'
-import { FeatureCard } from '../FeatureCard'
 import { OutcomeMock } from '../OutcomeMock'
 import { PricingCard } from '../PricingCard'
 
@@ -231,9 +229,9 @@ export function LandingPage() {
                   offer="Free shipping over $75"
                   why="They've purchased before. They're drifting."
                   products={[
-                    { name: 'S', color: 'rose' },
-                    { name: 'M', color: 'amber' },
-                    { name: 'L', color: 'orange' },
+                    { name: '$42', color: 'rose' },
+                    { name: '$28', color: 'amber' },
+                    { name: '$65', color: 'orange' },
                   ]}
                 />
                 <CampaignCard
@@ -243,9 +241,9 @@ export function LandingPage() {
                   audienceSize="1,420"
                   why="Excludes what they already bought."
                   products={[
-                    { name: 'A', color: 'sky' },
-                    { name: 'B', color: 'violet' },
-                    { name: 'C', color: 'emerald' },
+                    { name: 'Oak', color: 'sky' },
+                    { name: 'Ivy', color: 'violet' },
+                    { name: 'Elm', color: 'emerald' },
                   ]}
                 />
                 <CampaignCard
@@ -256,9 +254,9 @@ export function LandingPage() {
                   why="High intent customers + inventory is healthy."
                   showDraftOnly
                   products={[
-                    { name: 'X', color: 'slate' },
-                    { name: 'Y', color: 'stone' },
-                    { name: 'Z', color: 'zinc' },
+                    { name: '$38', color: 'slate' },
+                    { name: '$54', color: 'stone' },
+                    { name: '$71', color: 'zinc' },
                   ]}
                 />
               </div>
@@ -278,7 +276,7 @@ export function LandingPage() {
             </h2>
           </FadeInUp>
 
-          <div className="text-left space-y-6 text-gray-600 leading-relaxed">
+          <div className="space-y-6 text-gray-600 leading-relaxed">
             <p>
               You already have Shopify Email or Klaviyo. They&apos;re fine. You don&apos;t
               need more features.
@@ -286,7 +284,7 @@ export function LandingPage() {
 
             <p>You need the weekly decisions handled:</p>
 
-            <ul className="space-y-2 pl-4">
+            <ul className="space-y-2">
               {[
                 'What should I send this week?',
                 'Who should get it?',
@@ -294,8 +292,8 @@ export function LandingPage() {
                 "What offer won't kill margin?",
                 'How do I stay on brand?',
               ].map((item, index) => (
-                <li key={index} className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-3" />
+                <li key={index} className="inline-flex items-center justify-center w-full">
+                  <span className="text-gray-400 mr-2">—</span>
                   {item}
                 </li>
               ))}
@@ -408,17 +406,8 @@ export function LandingPage() {
           </FadeInUp>
 
           <div className="space-y-8">
-            <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                What we do
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                MerchOps drafts campaigns that match your store, your customers,
-                and your voice.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
+            {/* Card 1: What it feels like + One click to send */}
+            <div className="bg-teal-50 rounded-2xl p-8 border border-teal-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 What it feels like
               </h3>
@@ -426,7 +415,7 @@ export function LandingPage() {
                 It&apos;s like having a retention merchandiser who shows up every day
                 with:
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 {[
                   'A clear campaign idea',
                   'The right audience',
@@ -439,8 +428,15 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="border-t border-teal-200 pt-6">
+                <p className="text-gray-700 leading-relaxed">
+                  You approve in one click. MerchOps schedules through your
+                  existing tools.
+                </p>
+              </div>
             </div>
 
+            {/* Card 2: What you see */}
             <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 What you see
@@ -463,45 +459,22 @@ export function LandingPage() {
               </ul>
               <DraftEditorMock />
             </div>
-
-            <div className="bg-teal-50 rounded-2xl p-8 border border-teal-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">One click to send</h3>
-              <p className="text-gray-700 leading-relaxed">
-                You approve in one click. MerchOps schedules through your
-                existing tools.
-              </p>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Track What Works Section */}
-      <section className="py-16 md:py-20 px-4 sm:px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Track what works.
-            </h2>
-            <p className="text-gray-600 max-w-xl mx-auto">
-              Every campaign you approve builds a track record. MerchOps shows
-              you what landed, what missed, and why — so each draft gets better
-              than the last.
-            </p>
-          </div>
-          <OutcomeMock />
-        </div>
-      </section>
-
-      {/* ROI Section */}
-      <section className="py-16 md:py-20 px-4 sm:px-6">
+      {/* ROI + Track What Works — merged section */}
+      <section className="py-16 md:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
-            Time back. Revenue forward.
-          </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            MerchOps handles the decision work so you can spend your time on
-            what only you can do.
-          </p>
+          <FadeInUp>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
+              Time back. Revenue forward.
+            </h2>
+            <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+              MerchOps handles the decision work so you can spend your time on
+              what only you can do.
+            </p>
+          </FadeInUp>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
@@ -536,9 +509,25 @@ export function LandingPage() {
             ))}
           </div>
 
-          <p className="text-xs text-gray-400 text-center mt-6">
+          <p className="text-xs text-gray-400 text-center mt-6 mb-12">
             Based on typical store activity during beta testing period
           </p>
+
+          <div className="border-t border-gray-100 pt-12">
+            <div className="max-w-3xl mx-auto">
+              <FadeInUp>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+                  Track what works.
+                </h3>
+                <p className="text-gray-600 max-w-xl mx-auto text-center mb-10">
+                  Every campaign you approve builds a track record. MerchOps shows
+                  you what landed, what missed, and why — so each draft gets better
+                  than the last.
+                </p>
+              </FadeInUp>
+              <OutcomeMock />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -681,15 +670,20 @@ export function LandingPage() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Shopify Email
                   </h3>
-                  <p className="text-sm text-gray-500">Native integration</p>
+                  <p className="text-sm text-gray-500">
+                    Native integration{' '}
+                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full ml-1">
+                      Coming soon
+                    </span>
+                  </p>
                 </div>
               </div>
               <ul className="space-y-3">
                 {[
-                  'One-click export to Shopify Email',
-                  'Audience segments sync automatically',
+                  'Export-ready HTML drafts for Shopify Email',
+                  'Audience segments included in export',
                   'Products pull from your catalog',
-                  'Scheduling handled for you',
+                  'Copy-paste ready scheduling',
                 ].map((item, index) => (
                   <li
                     key={index}
@@ -731,56 +725,6 @@ export function LandingPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Differentiation Section - REFRAMED POSITIVELY */}
-      <section className="py-16 md:py-20 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
-          <FadeInUp>
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Smarter than templates.
-                <br />
-                <span className="text-teal-500">Safer than autopilot.</span>
-              </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                MerchOps combines merchandising intelligence with audience
-                targeting—so every campaign is relevant, timely, and on-brand.
-              </p>
-            </div>
-          </FadeInUp>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <FadeInUp delay={0}>
-              <FeatureCard
-                icon={ShoppingBag}
-                title="Merchandising intelligence"
-                description="Product picks that exclude past purchases, respect inventory levels, and protect your margins."
-              />
-            </FadeInUp>
-            <FadeInUp delay={100}>
-              <FeatureCard
-                icon={Users}
-                title="Clear audience targeting"
-                description="Simple cohorts like VIP, active, lapsing, and winback. No jargon, no complex segments to build."
-              />
-            </FadeInUp>
-            <FadeInUp delay={200}>
-              <FeatureCard
-                icon={Shield}
-                title="Built-in guardrails"
-                description="Frequency caps, exclusions, discount ceilings, and quiet hours—all configured by default."
-              />
-            </FadeInUp>
-            <FadeInUp delay={300}>
-              <FeatureCard
-                icon={MessageSquare}
-                title="Transparent reasoning"
-                description='Every campaign includes a "why this is worth sending" explanation. No black box decisions.'
-              />
-            </FadeInUp>
           </div>
         </div>
       </section>
@@ -935,7 +879,7 @@ export function LandingPage() {
             />
             <FAQItem
               question="Will it sound like AI?"
-              answer="MerchOps learns your tone from your existing copy and follows your brand voice rules. You can choose from minimal, warm, playful, or luxury tones, and refine over time."
+              answer="MerchOps generates copy in your chosen tone — minimal, warm, playful, or luxury — and you can refine every draft before sending. Over time, your edits help improve future suggestions."
             />
             <FAQItem
               question="What if it doesn't work for my store?"

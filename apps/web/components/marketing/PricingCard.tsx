@@ -2,13 +2,21 @@ import { Check } from 'lucide-react'
 import Link from 'next/link'
 import React from 'react'
 
+type PricingFeature =
+  | string
+  | {
+      text: string
+      highlight?: boolean
+      description?: string
+    }
+
 type PricingCardProps = {
   name: string
   price: string
   betaPrice?: string
   period?: string
   subtitle?: string
-  features: string[]
+  features: PricingFeature[]
   highlighted?: boolean
   ctaText: string
   roiAnchor?: string
@@ -68,12 +76,32 @@ export function PricingCard({
         <p className="text-xs text-gray-500 italic mb-6 -mt-2">{roiAnchor}</p>
       )}
       <ul className="space-y-3 mb-8 flex-1">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-start text-sm text-gray-600">
-            <Check className="w-5 h-5 text-teal-500 mr-2 flex-shrink-0" />
-            <span>{feature}</span>
-          </li>
-        ))}
+        {features.map((feature, index) => {
+          const isString = typeof feature === 'string'
+          const text = isString ? feature : feature.text
+          const isHighlighted = !isString && feature.highlight === true
+          const description = !isString ? feature.description : undefined
+
+          return (
+            <li key={index} className="flex items-start text-sm">
+              <Check className="w-5 h-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <span
+                  className={
+                    isHighlighted
+                      ? 'font-semibold text-gray-900'
+                      : 'text-gray-600'
+                  }
+                >
+                  {text}
+                </span>
+                {description && (
+                  <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ul>
       <Link
         href="/signup?returnTo=/app"
