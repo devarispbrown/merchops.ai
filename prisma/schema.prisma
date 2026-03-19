@@ -73,6 +73,7 @@ enum ExecutionType {
   klaviyo_segment_sync
   klaviyo_campaign_draft
   klaviyo_flow_trigger
+  shopify_email_draft
 }
 
 enum ShopifyConnectionStatus {

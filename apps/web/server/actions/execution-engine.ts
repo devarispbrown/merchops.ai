@@ -11,6 +11,7 @@ import { executeEmail } from "./execute/email";
 import { executeKlaviyoSegment } from "./execute/klaviyo-segment";
 import { executeKlaviyoCampaignDraft } from "./execute/klaviyo-campaign";
 import { executeKlaviyoFlowTrigger } from "./execute/klaviyo-flow";
+import { executeShopifyEmailDraft } from "./execute/shopify-email";
 
 // ============================================================================
 // TYPES
@@ -271,6 +272,9 @@ async function callExecutor(params: {
 
     case ExecutionType.KLAVIYO_FLOW_TRIGGER:
       return await executeKlaviyoFlowTrigger({ workspaceId, payload });
+
+    case ExecutionType.SHOPIFY_EMAIL_DRAFT:
+      return await executeShopifyEmailDraft({ workspaceId, payload });
 
     default:
       throw new Error(`Unsupported execution type: ${executionType}`);

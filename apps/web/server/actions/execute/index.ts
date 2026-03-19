@@ -11,6 +11,7 @@ import { executeDiscount, rollbackDiscount } from './discount';
 import { executePauseProduct, rollbackPauseProduct } from './pause-product';
 import { executeEmail, rollbackEmail } from './email';
 import { executeKlaviyoFlowTrigger } from './klaviyo-flow';
+import { executeShopifyEmailDraft } from './shopify-email';
 import { logger } from '../../observability/logger';
 import { db } from '../../db';
 
@@ -226,6 +227,9 @@ async function callExecutor(params: {
     case ExecutionType.KLAVIYO_FLOW_TRIGGER:
       return await executeKlaviyoFlowTrigger({ workspaceId, payload });
 
+    case ExecutionType.SHOPIFY_EMAIL_DRAFT:
+      return await executeShopifyEmailDraft({ workspaceId, payload });
+
     default:
       logger.error({
         executionType,
@@ -356,6 +360,7 @@ export {
   executePauseProduct,
   executeEmail,
   executeKlaviyoFlowTrigger,
+  executeShopifyEmailDraft,
   rollbackDiscount,
   rollbackPauseProduct,
   rollbackEmail,

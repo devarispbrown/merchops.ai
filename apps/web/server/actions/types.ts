@@ -16,6 +16,7 @@ export enum ExecutionType {
   KLAVIYO_SEGMENT_SYNC = "klaviyo_segment_sync",
   KLAVIYO_CAMPAIGN_DRAFT = "klaviyo_campaign_draft",
   KLAVIYO_FLOW_TRIGGER = "klaviyo_flow_trigger",
+  SHOPIFY_EMAIL_DRAFT = "shopify_email_draft",
 }
 
 export enum OperatorIntent {
@@ -124,6 +125,19 @@ export const KlaviyoFlowTriggerPayloadSchema = z.object({
 
 export type KlaviyoFlowTriggerPayload = z.infer<typeof KlaviyoFlowTriggerPayloadSchema>;
 
+// Shopify Email Draft Payload
+// Drafts are ALWAYS created with DRAFT status — the merchant reviews and sends
+// from the Shopify admin. This executor never triggers a live send.
+export const ShopifyEmailDraftPayloadSchema = z.object({
+  subject: z.string().min(1),
+  preview_text: z.string().default(''),
+  html_content: z.string().min(1),
+  from_name: z.string().optional(),
+  recipient_segment: z.string().min(1),
+});
+
+export type ShopifyEmailDraftPayload = z.infer<typeof ShopifyEmailDraftPayloadSchema>;
+
 // Union type for all payloads
 export type ActionPayload =
   | DiscountDraftPayload
@@ -131,7 +145,8 @@ export type ActionPayload =
   | PauseProductPayload
   | KlaviyoSegmentSyncPayload
   | KlaviyoCampaignDraftPayload
-  | KlaviyoFlowTriggerPayload;
+  | KlaviyoFlowTriggerPayload
+  | ShopifyEmailDraftPayload;
 
 // ============================================================================
 // EDITABLE FIELDS CONFIGURATION
@@ -347,6 +362,49 @@ export const EDITABLE_FIELDS: Partial<Record<ExecutionType, EditableFieldConfig[
       validation: z.string().optional(),
     },
   ],
+  [ExecutionType.SHOPIFY_EMAIL_DRAFT]: [
+    {
+      path: "subject",
+      label: "Email Subject",
+      type: "text",
+      required: true,
+      validation: z.string().min(1),
+    },
+    {
+      path: "preview_text",
+      label: "Preview Text",
+      type: "text",
+      required: false,
+      validation: z.string(),
+    },
+    {
+      path: "html_content",
+      label: "Email HTML Body",
+      type: "textarea",
+      required: true,
+      validation: z.string().min(1),
+    },
+    {
+      path: "from_name",
+      label: "From Name (optional)",
+      type: "text",
+      required: false,
+      validation: z.string().optional(),
+    },
+    {
+      path: "recipient_segment",
+      label: "Recipient Segment",
+      type: "select",
+      required: true,
+      validation: z.string().min(1),
+      options: [
+        { label: "Dormant 30 Days", value: "dormant_30" },
+        { label: "Dormant 60 Days", value: "dormant_60" },
+        { label: "Dormant 90 Days", value: "dormant_90" },
+        { label: "All Customers", value: "all_customers" },
+      ],
+    },
+  ],
 };
 
 // ============================================================================
@@ -409,6 +467,8 @@ export function getPayloadSchema(executionType: ExecutionType): z.ZodType<any> {
       return KlaviyoCampaignDraftPayloadSchema;
     case ExecutionType.KLAVIYO_FLOW_TRIGGER:
       return KlaviyoFlowTriggerPayloadSchema;
+    case ExecutionType.SHOPIFY_EMAIL_DRAFT:
+      return ShopifyEmailDraftPayloadSchema;
     default:
       throw new Error(`Unknown execution type: ${executionType}`);
   }

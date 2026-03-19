@@ -670,20 +670,15 @@ export function LandingPage() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Shopify Email
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    Native integration{' '}
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full ml-1">
-                      Coming soon
-                    </span>
-                  </p>
+                  <p className="text-sm text-gray-500">Native integration</p>
                 </div>
               </div>
               <ul className="space-y-3">
                 {[
-                  'Export-ready HTML drafts for Shopify Email',
-                  'Audience segments included in export',
+                  'Create email drafts directly in Shopify Email',
+                  'Audience segments sync automatically',
                   'Products pull from your catalog',
-                  'Copy-paste ready scheduling',
+                  'Review and send from Shopify admin',
                 ].map((item, index) => (
                   <li
                     key={index}
