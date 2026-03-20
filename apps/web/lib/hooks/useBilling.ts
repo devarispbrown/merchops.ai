@@ -47,6 +47,19 @@ export interface CreatePortalResponse {
   portal_url: string;
 }
 
+export interface BillingHistoryEvent {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'failed';
+  invoice_url: string | null;
+}
+
+export interface BillingHistoryResponse {
+  events: BillingHistoryEvent[];
+}
+
 // ============================================================================
 // QUERY KEYS
 // ============================================================================
@@ -55,6 +68,7 @@ export const billingKeys = {
   all: ['billing'] as const,
   subscription: () => [...billingKeys.all, 'subscription'] as const,
   usage: () => [...billingKeys.all, 'usage'] as const,
+  history: () => [...billingKeys.all, 'history'] as const,
 };
 
 // ============================================================================
@@ -93,6 +107,14 @@ async function createCheckoutSession(
     throw new Error('Failed to create checkout session');
   }
 
+  return response.json();
+}
+
+async function getBillingHistory(): Promise<BillingHistoryResponse> {
+  const response = await fetch('/api/billing/history');
+  if (!response.ok) {
+    throw new Error('Failed to fetch billing history');
+  }
   return response.json();
 }
 
@@ -137,6 +159,20 @@ export function useUsage(
     queryKey: billingKeys.usage(),
     queryFn: () => getUsageMetrics(),
     staleTime: 30000, // 30 seconds
+    ...options,
+  });
+}
+
+/**
+ * Hook to fetch billing history
+ */
+export function useBillingHistory(
+  options?: Omit<UseQueryOptions<BillingHistoryResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: billingKeys.history(),
+    queryFn: () => getBillingHistory(),
+    staleTime: 60000, // 1 minute
     ...options,
   });
 }

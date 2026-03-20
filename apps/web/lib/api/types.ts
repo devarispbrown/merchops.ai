@@ -250,6 +250,8 @@ export interface ShopifyConnectionResponse {
   status: ShopifyConnectionStatus;
   installed_at: string;
   revoked_at: string | null;
+  sync_state?: 'idle' | 'syncing' | 'completed' | 'failed';
+  last_synced_at?: string | null;
 }
 
 export interface InitiateConnectionRequest {

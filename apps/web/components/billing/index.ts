@@ -8,3 +8,4 @@ export * from './PlanCard';
 export * from './UpgradeModal';
 export * from './UpgradePrompt';
 export * from './BillingHistory';
+export * from './TrialExpiringBanner';

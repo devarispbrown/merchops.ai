@@ -14,6 +14,7 @@ import {
   useSubscription,
   useUsage,
   useCreatePortal,
+  useBillingHistory,
 } from '@/lib/hooks/useBilling';
 
 export default function BillingPage() {
@@ -21,6 +22,8 @@ export default function BillingPage() {
   const { data: subscription, isLoading: isLoadingSubscription } =
     useSubscription();
   const { data: usage, isLoading: isLoadingUsage } = useUsage();
+  const { data: billingHistory, isLoading: isLoadingHistory } =
+    useBillingHistory();
   const createPortal = useCreatePortal();
 
   const handleManageSubscription = () => {
@@ -275,10 +278,8 @@ export default function BillingPage() {
             Billing History
           </h2>
           <BillingHistory
-            events={[
-              // Mock data for now - will be replaced with actual API
-            ]}
-            isLoading={false}
+            events={billingHistory?.events ?? []}
+            isLoading={isLoadingHistory}
           />
         </div>
       </div>

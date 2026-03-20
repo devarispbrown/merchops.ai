@@ -16,6 +16,12 @@ import {
 } from '@/server/opportunities/create';
 import { OpportunityType } from '@/server/opportunities/types';
 
+// Mock billing limit enforcement — createOpportunityFromEvents now calls checkLimit/incrementUsage
+vi.mock('@/server/billing/limit-enforcement', () => ({
+  checkLimit: vi.fn().mockResolvedValue(undefined),
+  incrementUsage: vi.fn().mockResolvedValue(1),
+}));
+
 describe('Opportunity Generation - Integration', () => {
   const testWorkspace = createTestWorkspace();
 

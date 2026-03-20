@@ -26,6 +26,8 @@ type StatusResponse = {
   connected_at?: string;
   status?: 'active' | 'revoked' | 'error';
   last_sync_at?: string;
+  sync_state?: 'idle' | 'syncing' | 'completed' | 'failed';
+  last_synced_at?: string;
 };
 
 /**
@@ -56,6 +58,8 @@ async function shopifyStatusHandler(_request: NextRequest) {
       status: true,
       installed_at: true,
       revoked_at: true,
+      sync_state: true,
+      last_synced_at: true,
     },
   });
 
@@ -95,6 +99,8 @@ async function shopifyStatusHandler(_request: NextRequest) {
     connected_at: connection.installed_at.toISOString(),
     status: connection.status,
     last_sync_at: lastSyncEvent?.created_at.toISOString(),
+    sync_state: (connection.sync_state ?? undefined) as StatusResponse['sync_state'],
+    last_synced_at: connection.last_synced_at?.toISOString(),
   };
 
   logger.info(

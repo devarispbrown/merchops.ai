@@ -8,6 +8,7 @@ import { ActionDraftState, ExecutionStatus, getPayloadSchema } from "../types";
 import { randomBytes } from "crypto";
 import { getExecutionQueue } from "../../jobs/queues";
 import { QUEUE_NAMES } from "../../jobs/config";
+import { checkLimit, incrementUsage } from '../../billing/limit-enforcement';
 
 // ============================================================================
 // TYPES
@@ -59,6 +60,9 @@ export async function approveDraft(input: ApproveDraftInput): Promise<ApproveDra
   } catch (error: any) {
     throw new Error(`Payload validation failed: ${error.message}`);
   }
+
+  // Check billing limits before approval
+  await checkLimit(workspaceId, 'actions');
 
   // Generate idempotency key
   const idempotencyKey = generateIdempotencyKey(draftId);
@@ -121,6 +125,9 @@ export async function approveDraft(input: ApproveDraftInput): Promise<ApproveDra
     idempotencyKey,
     payload: draft.payload_json as any,
   });
+
+  // Increment usage after successful approval
+  await incrementUsage(workspaceId, 'actions');
 
   return {
     success: true,

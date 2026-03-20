@@ -11,14 +11,14 @@ import { ApprovalButton } from './ApprovalButton';
 interface Opportunity {
   id: string;
   type: string;
-  priorityBucket: 'high' | 'medium' | 'low';
-  title: string;
-  whyNow: string;
+  priority_bucket: 'high' | 'medium' | 'low';
+  rationale: string;
+  why_now: string;
   counterfactual: string;
-  impactRange: string;
+  impact_range: string;
   confidence: number;
-  decayAt: Date;
-  createdAt: Date;
+  decay_at: string | null;
+  created_at: string;
 }
 
 interface OpportunityCardProps {
@@ -34,9 +34,12 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
   }
 
   const confidencePercent = Math.round(opportunity.confidence * 100);
-  const daysUntilDecay = Math.ceil(
-    (opportunity.decayAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
+  const daysUntilDecay = opportunity.decay_at
+    ? Math.ceil(
+        (new Date(opportunity.decay_at).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24)
+      )
+    : null;
 
   return (
     <Card className="hover:shadow-md transition-calm">
@@ -45,21 +48,25 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h3 className="text-lg font-medium text-foreground mb-2">
-              {opportunity.title}
+              {opportunity.rationale}
             </h3>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Confidence: {confidencePercent}%</span>
-              <span>•</span>
-              <span>
-                {daysUntilDecay > 0
-                  ? `Decays in ${daysUntilDecay} day${daysUntilDecay !== 1 ? 's' : ''}`
-                  : 'Decaying soon'}
-              </span>
+              {daysUntilDecay !== null && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {daysUntilDecay > 0
+                      ? `Decays in ${daysUntilDecay} day${daysUntilDecay !== 1 ? 's' : ''}`
+                      : 'Decaying soon'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
-          <Badge variant={opportunity.priorityBucket}>
-            {opportunity.priorityBucket.charAt(0).toUpperCase() +
-              opportunity.priorityBucket.slice(1)}
+          <Badge variant={opportunity.priority_bucket}>
+            {opportunity.priority_bucket.charAt(0).toUpperCase() +
+              opportunity.priority_bucket.slice(1)}
           </Badge>
         </div>
 
@@ -70,7 +77,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
             <span className="text-sm font-medium text-foreground">Why now</span>
           </div>
           <p className="text-sm text-muted-foreground pl-3">
-            {opportunity.whyNow}
+            {opportunity.why_now}
           </p>
         </div>
 
@@ -98,7 +105,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground pl-3">
-                {opportunity.impactRange}
+                {opportunity.impact_range}
               </p>
             </div>
           </>

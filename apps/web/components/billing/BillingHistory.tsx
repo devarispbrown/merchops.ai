@@ -8,9 +8,10 @@ import { Card } from '@/components/ui/Card';
 export interface BillingEvent {
   id: string;
   date: string;
+  description?: string;
   amount: number;
   status: 'paid' | 'pending' | 'failed';
-  invoice_url?: string;
+  invoice_url?: string | null;
 }
 
 export interface BillingHistoryProps {

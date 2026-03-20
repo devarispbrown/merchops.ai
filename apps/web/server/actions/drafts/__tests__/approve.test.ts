@@ -56,6 +56,12 @@ vi.mock("../../../db/client", () => ({
   },
 }));
 
+// Mock billing limit enforcement — approve now calls checkLimit/incrementUsage
+vi.mock("../../../billing/limit-enforcement", () => ({
+  checkLimit: vi.fn().mockResolvedValue(undefined),
+  incrementUsage: vi.fn().mockResolvedValue(1),
+}));
+
 // ============================================================================
 // IMPORTS (after mocks)
 // ============================================================================

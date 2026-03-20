@@ -6,6 +6,7 @@
 
 import { PrismaClient, Opportunity } from '@prisma/client';
 import { prisma } from '../db/client';
+import { checkLimit, incrementUsage } from '@/server/billing/limit-enforcement';
 import {
   CreateOpportunityInput,
   OpportunityType,
@@ -39,9 +40,8 @@ export async function createOpportunityFromEvents(
     confidence = 0.5,
   } = input;
 
-  // TODO: Billing integration - uncomment when billing module is complete
-  // import { checkLimit, incrementUsage } from '@/server/billing';
-  // await checkLimit(workspace_id, 'opportunities');
+  // Check billing limits before creating opportunity
+  await checkLimit(workspace_id, 'opportunities');
 
   // Calculate decay time
   const decay_at = calculateDecayTime(type);
@@ -81,8 +81,8 @@ export async function createOpportunityFromEvents(
   // Link events to opportunity
   await linkEventsToOpportunity(opportunity.id, event_ids);
 
-  // TODO: Billing integration - uncomment when billing module is complete
-  // await incrementUsage(workspace_id, 'opportunities');
+  // Increment usage after successful creation
+  await incrementUsage(workspace_id, 'opportunities');
 
   return opportunity;
 }

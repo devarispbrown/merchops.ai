@@ -14,6 +14,7 @@ import {
   getEditableFields,
 } from "../types";
 import { generateAndLog } from "../../ai/generate";
+import { renderEmail } from "../../email/render";
 import {
   discountCopyPrompt,
   winbackEmailPrompt,
@@ -287,11 +288,22 @@ async function generateWinbackEmailPayload(params: {
     workspaceId,
   });
 
+  // Render email using react-email templates
+  const rendered = await renderEmail('winback_email_draft', {
+    subject: aiCopy.subject,
+    previewText: aiCopy.body.substring(0, 150),
+    body: aiCopy.body,
+    cta: aiCopy.cta,
+    ctaUrl: '{{store_url}}',
+    storeName: fromName,
+    unsubscribeUrl: '{{unsubscribe_url}}',
+  });
+
   return {
     subject: aiCopy.subject,
     preview_text: aiCopy.body.substring(0, 150),
-    body_html: buildEmailHtml(aiCopy.body, aiCopy.cta, fromName),
-    body_text: buildEmailText(aiCopy.body, aiCopy.cta),
+    body_html: rendered.html,
+    body_text: rendered.text,
     from_name: fromName,
     from_email: fromEmail,
     recipient_segment: "dormant_30_days",
@@ -459,27 +471,6 @@ function resolveUrgencyLevel(context: Record<string, any>): "low" | "medium" | "
   if (inventoryLevel <= 20) return "high";
   if (inventoryLevel <= 50) return "medium";
   return "low";
-}
-
-function buildEmailHtml(body: string, cta: string, storeName: string): string {
-  return `
-    <html>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <p>${body.replace(/\n/g, "</p><p>")}</p>
-        <a href="{{store_url}}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0;">
-          ${cta}
-        </a>
-        <p style="color: #6B7280; font-size: 14px;">
-          — ${storeName}<br/>
-          If you'd prefer not to receive these emails, you can <a href="{{unsubscribe_url}}">unsubscribe</a>.
-        </p>
-      </body>
-    </html>
-  `.trim();
-}
-
-function buildEmailText(body: string, cta: string): string {
-  return `${body}\n\n${cta}: {{store_url}}\n\nTo unsubscribe: {{unsubscribe_url}}`;
 }
 
 // ============================================================================

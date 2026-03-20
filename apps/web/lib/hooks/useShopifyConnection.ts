@@ -43,6 +43,10 @@ export function useShopifyConnectionQuery(
     // Check connection status frequently
     refetchOnMount: 'always',
     staleTime: 30000, // 30 seconds
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.sync_state === 'syncing' ? 5000 : false;
+    },
     ...options,
   });
 }
@@ -59,6 +63,8 @@ interface TransformedConnection {
   workspaceId?: string;
   installedAt?: string;
   revokedAt?: string | null;
+  syncState?: 'idle' | 'syncing' | 'completed' | 'failed';
+  lastSyncedAt?: string | null;
 }
 
 /**
@@ -75,6 +81,10 @@ export function useShopifyConnection(
     queryFn: () => getConnectionStatus(),
     refetchOnMount: 'always',
     staleTime: 30000, // 30 seconds
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.sync_state === 'syncing' ? 5000 : false;
+    },
     ...options,
   });
 
@@ -99,6 +109,8 @@ export function useShopifyConnection(
         workspaceId: query.data.workspace_id,
         installedAt: query.data.installed_at,
         revokedAt: query.data.revoked_at,
+        syncState: query.data.sync_state,
+        lastSyncedAt: query.data.last_synced_at,
       }
     : null;
 

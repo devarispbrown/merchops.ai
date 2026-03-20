@@ -141,50 +141,101 @@ export default function SettingsPage() {
           </Card>
         </Link>
 
-        <Card>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Account Settings
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your profile and preferences
-                  </p>
+        <Link href="/settings/klaviyo">
+          <Card className="hover:border-primary/50 cursor-pointer transition-calm">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <svg
+                      className="w-6 h-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Klaviyo
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Manage your Klaviyo email integration
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-muted-foreground">Email</span>
-                  <span className="text-foreground">user@example.com</span>
-                </div>
-              </div>
+              <svg
+                className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </div>
-          </div>
+          </Card>
+        </Link>
 
-          <div className="mt-4 pt-4 border-t border-border">
-            <Button variant="secondary" size="sm">
-              Edit Account
-            </Button>
-          </div>
-        </Card>
+        <Link href="/settings/account">
+          <Card className="hover:border-primary/50 cursor-pointer transition-calm">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                    <svg
+                      className="w-6 h-6 text-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Account
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Manage your profile and preferences
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <svg
+                className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Card>
+        </Link>
 
         <Card>
           <div className="flex items-start gap-3">

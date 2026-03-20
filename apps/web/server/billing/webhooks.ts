@@ -482,7 +482,74 @@ export async function handleTrialWillEnd(
     'Trial will end soon'
   );
 
-  // TODO: Send notification to user about trial ending
+  // Send trial ending notification email
+  try {
+    const { Resend } = await import('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    // Get workspace owner email
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: subscription.workspace_id },
+      include: {
+        users: {
+          select: { email: true },
+          take: 1,
+        },
+      },
+    });
+
+    const ownerEmail = workspace?.users?.[0]?.email;
+
+    if (ownerEmail) {
+      const trialEndDate = stripeSubscription.trial_end
+        ? new Date(stripeSubscription.trial_end * 1000).toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })
+        : 'soon';
+
+      await resend.emails.send({
+        from: 'MerchOps <noreply@merchops.ai>',
+        to: ownerEmail,
+        subject: 'Your MerchOps trial ends in 3 days',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1a1a1a;">Your trial is ending soon</h2>
+            <p style="color: #4a4a4a; line-height: 1.6;">
+              Your MerchOps trial will end on <strong>${trialEndDate}</strong>.
+              To continue using MerchOps and keep your data, please choose a plan.
+            </p>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.merchops.ai'}/settings/billing"
+               style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+              Choose a Plan
+            </a>
+            <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
+              If you have any questions, reply to this email and we'll help you out.
+            </p>
+          </div>
+        `,
+      });
+
+      logger.info(
+        {
+          subscriptionId: subscription.id,
+          ownerEmail,
+          trialEndDate,
+        },
+        'Trial ending notification email sent'
+      );
+    }
+  } catch (emailError) {
+    logger.error(
+      {
+        subscriptionId: subscription.id,
+        error: emailError instanceof Error ? emailError.message : 'Unknown error',
+      },
+      'Failed to send trial ending notification email'
+    );
+    // Don't throw - email failure should not block webhook processing
+  }
 }
 
 /**

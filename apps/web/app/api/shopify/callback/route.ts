@@ -142,6 +142,7 @@ async function shopifyCallbackHandler(request: NextRequest) {
       access_token_encrypted: encryptedToken,
       scopes: tokenResponse.scope,
       status: 'active',
+      sync_state: 'syncing',
       installed_at: new Date(),
       revoked_at: null,
     },
@@ -151,6 +152,7 @@ async function shopifyCallbackHandler(request: NextRequest) {
       access_token_encrypted: encryptedToken,
       scopes: tokenResponse.scope,
       status: 'active',
+      sync_state: 'syncing',
     },
   });
 
@@ -235,7 +237,7 @@ async function shopifyCallbackHandler(request: NextRequest) {
 
   // Create response and clear OAuth cookies
   const response = NextResponse.redirect(
-    new URL('/dashboard', request.url)
+    new URL('/queue', request.url)
   );
 
   response.cookies.delete('shopify_oauth_state');

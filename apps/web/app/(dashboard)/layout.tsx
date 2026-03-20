@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { TrialExpiringBanner } from '@/components/billing/TrialExpiringBanner';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 import { ToastContainer } from '@/components/ui/Toast';
 import { auth } from '@/server/auth';
 
@@ -18,11 +18,8 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div className="lg:pl-64">
-        <Header />
-        <main className="p-6 lg:p-8">{children}</main>
-      </div>
+      <TrialExpiringBanner />
+      <DashboardShell>{children}</DashboardShell>
       <ToastContainer />
     </div>
   );
